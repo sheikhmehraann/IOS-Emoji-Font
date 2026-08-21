@@ -6,10 +6,6 @@
 
 MODPATH=${0%/*}
 EF="$MODPATH/system/fonts/NotoColorEmoji.ttf"
-BTF="$MODPATH/system/fonts/SF-Pro-Bold.ttf"
-BOF="$MODPATH/system/fonts/SF-Pro-Bold.otf"
-VF="$MODPATH/system/fonts/SF-Pro-Variable.ttf"
-UF="$MODPATH/system/fonts/NotoNastaliqUrdu-Bold.ttf"
 
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 5; done
 while [ ! -d /sdcard ]; do sleep 5; done
@@ -20,21 +16,6 @@ if [ -f "$EF" ]; then
         [ -w "$font" ] && cp -f "$EF" "$font" && chmod 644 "$font" 2>/dev/null
     done
 fi
-
-# Override any Transsion theme cached fonts in /data
-for tdir in /data/system/theme/fonts /data/system/users/0/theme/fonts; do
-    if [ -d "$tdir" ]; then
-        for f in "$tdir"/*.ttf "$tdir"/*.otf; do
-            [ -f "$f" ] || continue
-            case "$(basename "$f")" in
-                *Nastaliq*|*Urdu*|*Arabic*) cp -f "$UF" "$f" 2>/dev/null ;;
-                *VF*|*Variable*) cp -f "$VF" "$f" 2>/dev/null ;;
-                *.otf) cp -f "$BOF" "$f" 2>/dev/null ;;
-                *) cp -f "$BTF" "$f" 2>/dev/null ;;
-            esac
-        done
-    fi
-done
 
 # Lock Messenger / Facebook emoji
 for pkg in com.facebook.orca com.facebook.katana com.facebook.lite com.facebook.mlite; do

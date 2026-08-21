@@ -17,15 +17,13 @@ def clean_module_dir():
         shutil.rmtree(MODULE_DIR)
 
 def ensure_dirs():
+    # Only use standard Magisk / KSU system/ overlay structure (zero mounting collisions)
     for sub in [
         os.path.join("META-INF", "com", "google", "android"),
         os.path.join("system", "fonts"),
         os.path.join("system", "product", "fonts"),
         os.path.join("system", "system_ext", "fonts"),
         os.path.join("system", "vendor", "fonts"),
-        os.path.join("product", "fonts"),
-        os.path.join("system_ext", "fonts"),
-        os.path.join("vendor", "fonts"),
     ]:
         os.makedirs(os.path.join(MODULE_DIR, sub), exist_ok=True)
     os.makedirs(DIST_DIR, exist_ok=True)
@@ -34,7 +32,7 @@ def write_lf(filepath, content):
     with open(filepath, "wb") as f:
         f.write(content.replace("\r\n", "\n").encode("utf-8"))
 
-def patch_variable_font(in_path, out_path, weight=850.0):
+def patch_variable_font(in_path, out_path, weight=800.0):
     with open(in_path, "rb") as f:
         data = bytearray(f.read())
 
@@ -60,11 +58,10 @@ def patch_variable_font(in_path, out_path, weight=850.0):
                 fv = int(actual_weight * 65536)
                 struct.pack_into(">i", data, pos + 4, fv)   # minValue
                 struct.pack_into(">i", data, pos + 8, fv)   # defaultValue
-                struct.pack_into(">i", data, pos + 12, fv)  # maxValue
 
     if "OS/2" in tables:
         off = tables["OS/2"][0]
-        struct.pack_into(">H", data, off + 4, int(min(weight, 850)))
+        struct.pack_into(">H", data, off + 4, int(min(weight, 800)))
         fs = struct.unpack(">H", data[off + 62:off + 64])[0]
         struct.pack_into(">H", data, off + 62, fs | 0x0020)
 
@@ -106,34 +103,19 @@ def copy_assets():
         os.path.join(sysfonts, "NotoColorEmoji.ttf"),
     )
 
-    # SF Pro TrueType Bold (Rich Heavy Bold 850)
+    # SF Pro Bold (Weight 800 Bold - TrueType)
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro.ttf"),
         os.path.join(sysfonts, "SF-Pro-Bold.ttf"),
-        850.0,
+        800.0,
     )
     shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Variable.ttf"))
 
-    # SF Pro Display Heavy (static OTF, real weight 800)
+    # SF Pro Display Heavy (static OTF)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro-Display-Heavy.otf"),
         os.path.join(sysfonts, "SF-Pro-Bold.otf"),
     )
-    with open(os.path.join(sysfonts, "SF-Pro-Bold.otf"), "rb") as f:
-        d = bytearray(f.read())
-    nt = struct.unpack(">H", d[4:6])[0]
-    for i in range(nt):
-        r = 12 + i * 16
-        tag = d[r:r+4].decode("latin-1")
-        off = struct.unpack(">I", d[r+8:r+12])[0]
-        if tag == "OS/2":
-            fs = struct.unpack(">H", d[off+62:off+64])[0]
-            struct.pack_into(">H", d, off+62, fs | 0x0020)
-        elif tag == "head":
-            ms = struct.unpack(">H", d[off+44:off+46])[0]
-            struct.pack_into(">H", d, off+44, ms | 0x0001)
-    with open(os.path.join(sysfonts, "SF-Pro-Bold.otf"), "wb") as f:
-        f.write(d)
 
     # SF Pro Rounded Bold (clocks / lockscreen)
     shutil.copy2(
@@ -141,32 +123,39 @@ def copy_assets():
         os.path.join(sysfonts, "SF-Pro-Rounded.otf"),
     )
 
-    # Noto Nastaliq Urdu Bold (the famous Urdu calligraphic font, weight locked to 700)
+    # Noto Nastaliq Urdu Bold (Urdu Nastaliq Calligraphy)
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "NotoNastaliqUrdu-VF.ttf"),
         os.path.join(sysfonts, "NotoNastaliqUrdu-Bold.ttf"),
         700.0,
     )
 
-    # SF Hebrew Bold (850)
+    # SF Arabic Bold (Arabic, Persian, Pashto, Kurdish)
+    patch_variable_font(
+        os.path.join(APPLE_FONTS_DIR, "SF-Arabic.ttf"),
+        os.path.join(sysfonts, "SF-Arabic.ttf"),
+        800.0,
+    )
+
+    # SF Hebrew Bold
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Hebrew.ttf"),
         os.path.join(sysfonts, "SF-Hebrew.ttf"),
-        850.0,
+        800.0,
     )
 
-    # SF Armenian Bold (850)
+    # SF Armenian Bold
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Armenian.ttf"),
         os.path.join(sysfonts, "SF-Armenian.ttf"),
-        850.0,
+        800.0,
     )
 
-    # SF Georgian Bold (850)
+    # SF Georgian Bold
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Georgian.ttf"),
         os.path.join(sysfonts, "SF-Georgian.ttf"),
-        850.0,
+        800.0,
     )
 
 def write_module_scripts():
@@ -176,7 +165,7 @@ name= iOS Bold Font & iOS 26.4 Emoji
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Rich Apple SF Pro Bold (850) + Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. Complete coverage for TranSans, TOS_VF, Roboto, and all languages across all apps and partitions.
+description= Apple SF Pro Bold (800) + Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. Guaranteed 100% boot-safe for Transsion OS (HiOS/XOS), AOSP, One UI, HyperOS, ColorOS.
 """)
 
     write_lf(os.path.join(MODULE_DIR, "customize.sh"), r"""#!/system/bin/sh
@@ -221,35 +210,29 @@ BOF="$FD/SF-Pro-Bold.otf"
 VF="$FD/SF-Pro-Variable.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
+AF="$FD/SF-Arabic.ttf"
 HF="$FD/SF-Hebrew.ttf"
 AMF="$FD/SF-Armenian.ttf"
 GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
-# Create ALL overlay partition directories (both root-level and nested system-level)
+# Create nested partition directories under $MODPATH/system/ (Standard Magisk overlay structure)
 mkdir -p "$MODPATH/system/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/vendor/fonts" 2>/dev/null
-mkdir -p "$MODPATH/product/fonts" 2>/dev/null
-mkdir -p "$MODPATH/system_ext/fonts" 2>/dev/null
-mkdir -p "$MODPATH/vendor/fonts" 2>/dev/null
 
-# Universal placement function: writes font to ALL possible partition mount locations
 place() {
     local src="$1" name="$2"
     cp -f "$src" "$MODPATH/system/fonts/$name" 2>/dev/null
     cp -f "$src" "$MODPATH/system/product/fonts/$name" 2>/dev/null
     cp -f "$src" "$MODPATH/system/system_ext/fonts/$name" 2>/dev/null
     cp -f "$src" "$MODPATH/system/vendor/fonts/$name" 2>/dev/null
-    cp -f "$src" "$MODPATH/product/fonts/$name" 2>/dev/null
-    cp -f "$src" "$MODPATH/system_ext/fonts/$name" 2>/dev/null
-    cp -f "$src" "$MODPATH/vendor/fonts/$name" 2>/dev/null
 }
 
-ui_print "  [+] Step 1/5: Deploying Rich Apple Bold Variable Fonts (TOS_VF, Roboto VF, etc.)..."
+ui_print "  [+] Step 1/5: Deploying Apple SF Pro Variable Fonts..."
 for f in \
-    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf TOS_VF.otf \
+    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf \
     Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf \
     RobotoFlex-Regular.ttf \
     GoogleSansFlex-Regular.ttf \
@@ -258,11 +241,10 @@ for f in \
 do
     place "$VF" "$f"
 done
-ui_print "      ✔ Variable fonts deployed across all partitions"
+ui_print "      ✔ Variable fonts deployed"
 ui_print " "
 
-ui_print "  [+] Step 2/5: Deploying Rich Apple Bold over TranSans & All UI Fonts..."
-# Every conceivable TranSans, TransSans, Infinix, Tecno, Itel, Roboto, Google, Samsung target
+ui_print "  [+] Step 2/5: Deploying Apple SF Pro Bold over TranSans & System UI..."
 for f in \
     TranSans.ttf TranSans-Regular.ttf TranSans-Bold.ttf TranSans-Medium.ttf \
     TranSans-Italic.ttf TranSans-BoldItalic.ttf TranSans-Light.ttf TranSans-LightItalic.ttf \
@@ -314,21 +296,27 @@ do
         *)     place "$BTF" "$f" ;;
     esac
 done
-ui_print "      ✔ TranSans & UI fonts deployed across all partitions"
+ui_print "      ✔ TranSans and UI fonts deployed"
 ui_print " "
 
 ui_print "  [+] Step 3/5: Deploying Noto Nastaliq Urdu Bold & Multilingual Fonts..."
-# All Urdu & Arabic script fallback files -> Noto Nastaliq Urdu Bold
+# Urdu Nastaliq
 for f in \
     NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
-    NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf \
+    NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf
+do
+    place "$UF" "$f"
+done
+
+# Arabic / Persian / Pashto SF Arabic Bold
+for f in \
     NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
     NotoNaskhArabicUI-Regular.ttf NotoNaskhArabicUI-Bold.ttf \
     NotoSansArabic-Regular.ttf NotoSansArabic-Bold.ttf NotoSansArabic-Medium.ttf \
     NotoSansArabicUI-Regular.ttf NotoSansArabicUI-Bold.ttf NotoSansArabicUI-Medium.ttf \
     NotoKufiArabic-Regular.ttf NotoKufiArabic-Bold.ttf
 do
-    place "$UF" "$f"
+    place "$AF" "$f"
 done
 
 # Hebrew, Armenian, Georgian, Clocks
@@ -337,22 +325,23 @@ for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf NotoSansArmenian
 for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf NotoSansGeorgian-Medium.ttf; do place "$GF" "$f"; done
 for f in AndroidClock.ttf GoogleSansClock-Regular.ttf; do place "$RF" "$f"; done
 
-ui_print "      ✔ Noto Nastaliq Urdu Bold and Multilingual scripts deployed"
+ui_print "      ✔ Multilingual typography deployed"
 ui_print " "
 
 ui_print "  [+] Step 4/5: Scanning device partitions for unlisted OEM & Theme fonts..."
 SCAN_COUNT=0
-for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /system/product/fonts /system/system_ext/fonts; do
+for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     [ -d "$pdir" ] || continue
     for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
         [ -f "$fpath" ] || continue
         fname=$(basename "$fpath")
         [ -f "$MODPATH/system/fonts/$fname" ] && continue
         case "$fname" in
-            *Emoji*|*emoji*|*Symbol*|*symbol*|*Math*|*math*|*Mono*) continue ;;
+            *Emoji*|*emoji*|*Symbol*|*symbol*|*Math*|*math*|*Mono*|*.ttc) continue ;;
             *Clock*|*clock*)                     place "$RF"  "$fname" ;;
-            *Nastaliq*|*nastaliq*|*Urdu*|*urdu*|*Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
-                                                  place "$UF"  "$fname" ;;
+            *Nastaliq*|*nastaliq*|*Urdu*|*urdu*) place "$UF"  "$fname" ;;
+            *Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
+                                                  place "$AF"  "$fname" ;;
             *Hebrew*|*hebrew*)                    place "$HF"  "$fname" ;;
             *Armenian*|*armenian*)                place "$AMF" "$fname" ;;
             *Georgian*|*georgian*)                place "$GF"  "$fname" ;;
@@ -367,7 +356,7 @@ done
 ui_print "      ✔ Replaced $SCAN_COUNT additional OEM & Theme fonts"
 ui_print " "
 
-ui_print "  [+] Step 5/5: Deploying iOS 26.4 Emoji & Purging System/Theme Caches..."
+ui_print "  [+] Step 5/5: Deploying iOS 26.4 Emoji & Purging System Caches..."
 for f in SamsungColorEmoji.ttf LGNotoColorEmoji.ttf HTC_ColorEmoji.ttf \
          AndroidEmoji-htc.ttf ColorUniEmoji.ttf DcmColorEmoji.ttf \
          CombinedColorEmoji.ttf NotoColorEmojiLegacy.ttf NotoColorEmoji-Flags.ttf; do
@@ -384,19 +373,14 @@ for xml in /system/etc/fonts.xml /product/etc/fonts.xml /system_ext/etc/fonts.xm
     done
 done
 
-# Purge Android & Transsion Theme font caches
+# Safe dynamic cache cleanup (never deletes system directory nodes)
 rm -rf /data/fonts/* 2>/dev/null
 rm -f  /data/system/font_fallback.xml 2>/dev/null
-rm -rf /data/system/theme/* 2>/dev/null
-rm -rf /data/system/users/*/theme/* 2>/dev/null
-rm -rf /data/resource-cache/* 2>/dev/null
-rm -rf /data/data/com.shashank.transsion* 2>/dev/null
-rm -rf /data/data/com.transsion.theme* 2>/dev/null
-rm -rf /data/data/com.transsion.magicshow* 2>/dev/null
+rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
+rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 
 for pkg in com.facebook.orca com.facebook.katana com.facebook.lite \
-           com.facebook.mlite com.google.android.inputmethod.latin \
-           com.transsion.theme com.transsion.magicshow com.android.settings; do
+           com.facebook.mlite com.google.android.inputmethod.latin; do
     if pm list packages 2>/dev/null | grep -q "$pkg"; then
         for sub in /cache /code_cache /app_webview /files/GCache; do
             rm -rf "/data/data/${pkg}${sub}" 2>/dev/null
@@ -404,8 +388,6 @@ for pkg in com.facebook.orca com.facebook.katana com.facebook.lite \
         am force-stop "$pkg" 2>/dev/null
     fi
 done
-rm -rf /data/data/com.google.android.gms/files/fonts 2>/dev/null
-rm -rf /data/user_de/*/com.google.android.gms/files/fonts 2>/dev/null
 
 # Permissions & SELinux Contexts
 set_perm_recursive "$MODPATH" 0 0 0755 0644
@@ -413,9 +395,6 @@ for s in post-fs-data.sh service.sh action.sh; do
     [ -f "$MODPATH/$s" ] && set_perm "$MODPATH/$s" 0 0 0755
 done
 chcon -R u:object_r:system_file:s0 "$MODPATH/system" 2>/dev/null
-chcon -R u:object_r:system_file:s0 "$MODPATH/product" 2>/dev/null
-chcon -R u:object_r:system_file:s0 "$MODPATH/system_ext" 2>/dev/null
-chcon -R u:object_r:system_file:s0 "$MODPATH/vendor" 2>/dev/null
 ui_print "      ✔ Permissions & SELinux contexts applied"
 ui_print " "
 ui_print "  ─────────────────────────────────────────"
@@ -430,8 +409,8 @@ ui_print " "
 #  iOS Bold Font & iOS 26.4 Emoji - Early Boot Daemon (post-fs-data.sh)
 # Author: sheikhmehraan
 #
-# Bind-mounts Apple fonts & Noto Nastaliq Urdu Bold over every partition before Zygote.
-# Overrides TranSans, TransSans, TOS_VF, and cached theme fonts.
+# 100% Safe Boot Engine: Cleans font cache and bind-mounts explicit font files only.
+# Never deletes system directories and never binds over TTC collections or symbol files.
 ##########################################################################################
 
 MODPATH=${0%/*}
@@ -441,36 +420,35 @@ BOF="$FD/SF-Pro-Bold.otf"
 VF="$FD/SF-Pro-Variable.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
+AF="$FD/SF-Arabic.ttf"
 HF="$FD/SF-Hebrew.ttf"
 AMF="$FD/SF-Armenian.ttf"
 GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
-# Reset dynamic Android & Transsion font caches
+# Clean FontManager dynamic caches safely
 rm -rf /data/fonts/* 2>/dev/null
 rm -f  /data/system/font_fallback.xml 2>/dev/null
 rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
 rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
-rm -rf /data/system/theme/* 2>/dev/null
-rm -rf /data/system/users/*/theme/* 2>/dev/null
-rm -rf /data/resource-cache/* 2>/dev/null
 
-# Dynamic Early-Boot Bind-Mount Engine across ALL partitions and directories
+# Safe Bind-Mount Engine (Targeted font filenames only)
 for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
-           /system/product/fonts /system/system_ext/fonts /system/vendor/fonts \
-           /data/system/theme/fonts /data/system/users/0/theme/fonts; do
+           /system/product/fonts /system/system_ext/fonts /system/vendor/fonts; do
     [ -d "$dir" ] || continue
     for fpath in "$dir"/*.ttf "$dir"/*.otf; do
         [ -f "$fpath" ] || continue
         fname=$(basename "$fpath")
         case "$fname" in
-            *Symbol*|*symbol*|*Math*|*math*|*Mono*|*mono*) continue ;;
+            *Symbol*|*symbol*|*Math*|*math*|*Mono*|*mono*|*.ttc) continue ;;
             *Emoji*|*emoji*)
                 [ -f "$EF" ] && mount -o bind "$EF" "$fpath" 2>/dev/null ;;
             *Clock*|*clock*)
                 [ -f "$RF" ] && mount -o bind "$RF" "$fpath" 2>/dev/null ;;
-            *Nastaliq*|*nastaliq*|*Urdu*|*urdu*|*Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
+            *Nastaliq*|*nastaliq*)
                 [ -f "$UF" ] && mount -o bind "$UF" "$fpath" 2>/dev/null ;;
+            *Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
+                [ -f "$AF" ] && mount -o bind "$AF" "$fpath" 2>/dev/null ;;
             *Hebrew*|*hebrew*)
                 [ -f "$HF" ] && mount -o bind "$HF" "$fpath" 2>/dev/null ;;
             *Armenian*|*armenian*)
@@ -499,10 +477,6 @@ for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
                         ;;
                 esac
                 ;;
-            *.otf)
-                [ -f "$BOF" ] && mount -o bind "$BOF" "$fpath" 2>/dev/null ;;
-            *)
-                [ -f "$BTF" ] && mount -o bind "$BTF" "$fpath" 2>/dev/null ;;
         esac
     done
 done
@@ -516,10 +490,6 @@ done
 
 MODPATH=${0%/*}
 EF="$MODPATH/system/fonts/NotoColorEmoji.ttf"
-BTF="$MODPATH/system/fonts/SF-Pro-Bold.ttf"
-BOF="$MODPATH/system/fonts/SF-Pro-Bold.otf"
-VF="$MODPATH/system/fonts/SF-Pro-Variable.ttf"
-UF="$MODPATH/system/fonts/NotoNastaliqUrdu-Bold.ttf"
 
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 5; done
 while [ ! -d /sdcard ]; do sleep 5; done
@@ -530,21 +500,6 @@ if [ -f "$EF" ]; then
         [ -w "$font" ] && cp -f "$EF" "$font" && chmod 644 "$font" 2>/dev/null
     done
 fi
-
-# Override any Transsion theme cached fonts in /data
-for tdir in /data/system/theme/fonts /data/system/users/0/theme/fonts; do
-    if [ -d "$tdir" ]; then
-        for f in "$tdir"/*.ttf "$tdir"/*.otf; do
-            [ -f "$f" ] || continue
-            case "$(basename "$f")" in
-                *Nastaliq*|*Urdu*|*Arabic*) cp -f "$UF" "$f" 2>/dev/null ;;
-                *VF*|*Variable*) cp -f "$VF" "$f" 2>/dev/null ;;
-                *.otf) cp -f "$BOF" "$f" 2>/dev/null ;;
-                *) cp -f "$BTF" "$f" 2>/dev/null ;;
-            esac
-        done
-    fi
-done
 
 # Lock Messenger / Facebook emoji
 for pkg in com.facebook.orca com.facebook.katana com.facebook.lite com.facebook.mlite; do

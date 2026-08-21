@@ -40,35 +40,29 @@ BOF="$FD/SF-Pro-Bold.otf"
 VF="$FD/SF-Pro-Variable.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
+AF="$FD/SF-Arabic.ttf"
 HF="$FD/SF-Hebrew.ttf"
 AMF="$FD/SF-Armenian.ttf"
 GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
-# Create ALL overlay partition directories (both root-level and nested system-level)
+# Create nested partition directories under $MODPATH/system/ (Standard Magisk overlay structure)
 mkdir -p "$MODPATH/system/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/vendor/fonts" 2>/dev/null
-mkdir -p "$MODPATH/product/fonts" 2>/dev/null
-mkdir -p "$MODPATH/system_ext/fonts" 2>/dev/null
-mkdir -p "$MODPATH/vendor/fonts" 2>/dev/null
 
-# Universal placement function: writes font to ALL possible partition mount locations
 place() {
     local src="$1" name="$2"
     cp -f "$src" "$MODPATH/system/fonts/$name" 2>/dev/null
     cp -f "$src" "$MODPATH/system/product/fonts/$name" 2>/dev/null
     cp -f "$src" "$MODPATH/system/system_ext/fonts/$name" 2>/dev/null
     cp -f "$src" "$MODPATH/system/vendor/fonts/$name" 2>/dev/null
-    cp -f "$src" "$MODPATH/product/fonts/$name" 2>/dev/null
-    cp -f "$src" "$MODPATH/system_ext/fonts/$name" 2>/dev/null
-    cp -f "$src" "$MODPATH/vendor/fonts/$name" 2>/dev/null
 }
 
-ui_print "  [+] Step 1/5: Deploying Rich Apple Bold Variable Fonts (TOS_VF, Roboto VF, etc.)..."
+ui_print "  [+] Step 1/5: Deploying Apple SF Pro Variable Fonts..."
 for f in \
-    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf TOS_VF.otf \
+    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf \
     Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf \
     RobotoFlex-Regular.ttf \
     GoogleSansFlex-Regular.ttf \
@@ -77,11 +71,10 @@ for f in \
 do
     place "$VF" "$f"
 done
-ui_print "      ✔ Variable fonts deployed across all partitions"
+ui_print "      ✔ Variable fonts deployed"
 ui_print " "
 
-ui_print "  [+] Step 2/5: Deploying Rich Apple Bold over TranSans & All UI Fonts..."
-# Every conceivable TranSans, TransSans, Infinix, Tecno, Itel, Roboto, Google, Samsung target
+ui_print "  [+] Step 2/5: Deploying Apple SF Pro Bold over TranSans & System UI..."
 for f in \
     TranSans.ttf TranSans-Regular.ttf TranSans-Bold.ttf TranSans-Medium.ttf \
     TranSans-Italic.ttf TranSans-BoldItalic.ttf TranSans-Light.ttf TranSans-LightItalic.ttf \
@@ -133,21 +126,27 @@ do
         *)     place "$BTF" "$f" ;;
     esac
 done
-ui_print "      ✔ TranSans & UI fonts deployed across all partitions"
+ui_print "      ✔ TranSans and UI fonts deployed"
 ui_print " "
 
 ui_print "  [+] Step 3/5: Deploying Noto Nastaliq Urdu Bold & Multilingual Fonts..."
-# All Urdu & Arabic script fallback files -> Noto Nastaliq Urdu Bold
+# Urdu Nastaliq
 for f in \
     NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
-    NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf \
+    NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf
+do
+    place "$UF" "$f"
+done
+
+# Arabic / Persian / Pashto SF Arabic Bold
+for f in \
     NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
     NotoNaskhArabicUI-Regular.ttf NotoNaskhArabicUI-Bold.ttf \
     NotoSansArabic-Regular.ttf NotoSansArabic-Bold.ttf NotoSansArabic-Medium.ttf \
     NotoSansArabicUI-Regular.ttf NotoSansArabicUI-Bold.ttf NotoSansArabicUI-Medium.ttf \
     NotoKufiArabic-Regular.ttf NotoKufiArabic-Bold.ttf
 do
-    place "$UF" "$f"
+    place "$AF" "$f"
 done
 
 # Hebrew, Armenian, Georgian, Clocks
@@ -156,22 +155,23 @@ for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf NotoSansArmenian
 for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf NotoSansGeorgian-Medium.ttf; do place "$GF" "$f"; done
 for f in AndroidClock.ttf GoogleSansClock-Regular.ttf; do place "$RF" "$f"; done
 
-ui_print "      ✔ Noto Nastaliq Urdu Bold and Multilingual scripts deployed"
+ui_print "      ✔ Multilingual typography deployed"
 ui_print " "
 
 ui_print "  [+] Step 4/5: Scanning device partitions for unlisted OEM & Theme fonts..."
 SCAN_COUNT=0
-for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /system/product/fonts /system/system_ext/fonts; do
+for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     [ -d "$pdir" ] || continue
     for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
         [ -f "$fpath" ] || continue
         fname=$(basename "$fpath")
         [ -f "$MODPATH/system/fonts/$fname" ] && continue
         case "$fname" in
-            *Emoji*|*emoji*|*Symbol*|*symbol*|*Math*|*math*|*Mono*) continue ;;
+            *Emoji*|*emoji*|*Symbol*|*symbol*|*Math*|*math*|*Mono*|*.ttc) continue ;;
             *Clock*|*clock*)                     place "$RF"  "$fname" ;;
-            *Nastaliq*|*nastaliq*|*Urdu*|*urdu*|*Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
-                                                  place "$UF"  "$fname" ;;
+            *Nastaliq*|*nastaliq*|*Urdu*|*urdu*) place "$UF"  "$fname" ;;
+            *Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
+                                                  place "$AF"  "$fname" ;;
             *Hebrew*|*hebrew*)                    place "$HF"  "$fname" ;;
             *Armenian*|*armenian*)                place "$AMF" "$fname" ;;
             *Georgian*|*georgian*)                place "$GF"  "$fname" ;;
@@ -186,7 +186,7 @@ done
 ui_print "      ✔ Replaced $SCAN_COUNT additional OEM & Theme fonts"
 ui_print " "
 
-ui_print "  [+] Step 5/5: Deploying iOS 26.4 Emoji & Purging System/Theme Caches..."
+ui_print "  [+] Step 5/5: Deploying iOS 26.4 Emoji & Purging System Caches..."
 for f in SamsungColorEmoji.ttf LGNotoColorEmoji.ttf HTC_ColorEmoji.ttf \
          AndroidEmoji-htc.ttf ColorUniEmoji.ttf DcmColorEmoji.ttf \
          CombinedColorEmoji.ttf NotoColorEmojiLegacy.ttf NotoColorEmoji-Flags.ttf; do
@@ -203,19 +203,14 @@ for xml in /system/etc/fonts.xml /product/etc/fonts.xml /system_ext/etc/fonts.xm
     done
 done
 
-# Purge Android & Transsion Theme font caches
+# Safe dynamic cache cleanup (never deletes system directory nodes)
 rm -rf /data/fonts/* 2>/dev/null
 rm -f  /data/system/font_fallback.xml 2>/dev/null
-rm -rf /data/system/theme/* 2>/dev/null
-rm -rf /data/system/users/*/theme/* 2>/dev/null
-rm -rf /data/resource-cache/* 2>/dev/null
-rm -rf /data/data/com.shashank.transsion* 2>/dev/null
-rm -rf /data/data/com.transsion.theme* 2>/dev/null
-rm -rf /data/data/com.transsion.magicshow* 2>/dev/null
+rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
+rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 
 for pkg in com.facebook.orca com.facebook.katana com.facebook.lite \
-           com.facebook.mlite com.google.android.inputmethod.latin \
-           com.transsion.theme com.transsion.magicshow com.android.settings; do
+           com.facebook.mlite com.google.android.inputmethod.latin; do
     if pm list packages 2>/dev/null | grep -q "$pkg"; then
         for sub in /cache /code_cache /app_webview /files/GCache; do
             rm -rf "/data/data/${pkg}${sub}" 2>/dev/null
@@ -223,8 +218,6 @@ for pkg in com.facebook.orca com.facebook.katana com.facebook.lite \
         am force-stop "$pkg" 2>/dev/null
     fi
 done
-rm -rf /data/data/com.google.android.gms/files/fonts 2>/dev/null
-rm -rf /data/user_de/*/com.google.android.gms/files/fonts 2>/dev/null
 
 # Permissions & SELinux Contexts
 set_perm_recursive "$MODPATH" 0 0 0755 0644
@@ -232,9 +225,6 @@ for s in post-fs-data.sh service.sh action.sh; do
     [ -f "$MODPATH/$s" ] && set_perm "$MODPATH/$s" 0 0 0755
 done
 chcon -R u:object_r:system_file:s0 "$MODPATH/system" 2>/dev/null
-chcon -R u:object_r:system_file:s0 "$MODPATH/product" 2>/dev/null
-chcon -R u:object_r:system_file:s0 "$MODPATH/system_ext" 2>/dev/null
-chcon -R u:object_r:system_file:s0 "$MODPATH/vendor" 2>/dev/null
 ui_print "      ✔ Permissions & SELinux contexts applied"
 ui_print " "
 ui_print "  ─────────────────────────────────────────"
