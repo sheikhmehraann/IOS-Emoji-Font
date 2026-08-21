@@ -1,14 +1,45 @@
 #!/system/bin/sh
 ##########################################################################################
-#  iOS Bold Font & iOS 26.4 Emoji - Background Daemon
+#  iOS Bold Font & iOS 26.4 Emoji - Universal Font Daemon
 # Author: sheikhmehraan
 ##########################################################################################
 
 MODPATH=${0%/*}
-EF="$MODPATH/system/fonts/NotoColorEmoji.ttf"
+FD="$MODPATH/system/fonts"
+BTF="$FD/SF-Pro-Bold.ttf"
+BOF="$FD/SF-Pro-Bold.otf"
+VF="$FD/SF-Pro-Variable.ttf"
+RF="$FD/SF-Pro-Rounded.otf"
+UF="$FD/NotoNastaliqUrdu-Bold.ttf"
+AF="$FD/SF-Arabic.ttf"
+HF="$FD/SF-Hebrew.ttf"
+AMF="$FD/SF-Armenian.ttf"
+GF="$FD/SF-Georgian.ttf"
+EF="$FD/NotoColorEmoji.ttf"
 
-while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 5; done
-while [ ! -d /sdcard ]; do sleep 5; done
+# Apply direct mount binding (KernelSU GKI / EROFS / Android 15 fallback)
+mount -o bind "$EF" /system/fonts/NotoColorEmoji.ttf 2>/dev/null
+mount -o bind "$EF" /system/fonts/NotoColorEmojiFlags.ttf 2>/dev/null
+
+for f in /system/fonts/Roboto*.ttf /system/fonts/DroidSans*.ttf /system/fonts/GoogleSans*.ttf /system/fonts/SECRoboto*.ttf; do
+    [ -f "$f" ] && mount -o bind "$BTF" "$f" 2>/dev/null
+done
+
+for f in /product/fonts/*; do
+    [ -f "$f" ] || continue
+    mount -o bind "$BTF" "$f" 2>/dev/null
+done
+
+for f in /system/fonts/NotoNaskhArabic*.ttf /system/fonts/NotoSansArabic*.ttf /system/fonts/NotoNastaliqUrdu*.ttf; do
+    [ -f "$f" ] && mount -o bind "$UF" "$f" 2>/dev/null
+done
+
+for f in /system/fonts/NotoSansHebrew*.ttf; do [ -f "$f" ] && mount -o bind "$HF" "$f" 2>/dev/null; done
+for f in /system/fonts/NotoSansArmenian*.ttf; do [ -f "$f" ] && mount -o bind "$AMF" "$f" 2>/dev/null; done
+for f in /system/fonts/NotoSansGeorgian*.ttf; do [ -f "$f" ] && mount -o bind "$GF" "$f" 2>/dev/null; done
+for f in /system/fonts/AndroidClock*.ttf; do [ -f "$f" ] && mount -o bind "$RF" "$f" 2>/dev/null; done
+
+while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done
 
 # Replace in-app emoji fonts
 if [ -f "$EF" ]; then

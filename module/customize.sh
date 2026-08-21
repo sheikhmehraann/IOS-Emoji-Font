@@ -46,7 +46,7 @@ AMF="$FD/SF-Armenian.ttf"
 GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
-# Create nested partition directories under $MODPATH/system/ (Standard Magisk overlay structure)
+# Create nested partition directories under $MODPATH/system/
 mkdir -p "$MODPATH/system/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
@@ -62,7 +62,7 @@ place() {
 
 ui_print "  [+] Step 1/5: Deploying Apple SF Pro Variable Fonts..."
 for f in \
-    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf \
+    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf TOS_250829VF.ttf \
     Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf \
     RobotoFlex-Regular.ttf \
     GoogleSansFlex-Regular.ttf \
@@ -86,7 +86,7 @@ for f in \
     TranSans.otf TranSans-Regular.otf TranSans-Bold.otf TranSans-Medium.otf \
     TransSans.ttf TransSans-Regular.ttf TransSans-Bold.ttf TransSans-Medium.ttf TransSans-Italic.ttf \
     TransSans_Regular.ttf TransSans_Bold.ttf TransSans_Medium.ttf TransSans_Italic.ttf \
-    TransSans_SC.ttf TransSans_TC.ttf TransSans_Thai.ttf TransSans_Myanmar.ttf \
+    TransSans_SC.ttf TransSans_TC.ttf TransSans_Thai.ttf TransSans_Myanmar.ttf TransSans_SC_0704.ttf \
     TOS.ttf TOS-Regular.ttf TOS-Bold.ttf \
     InfinixSans.ttf InfinixSans-Regular.ttf InfinixSans-Bold.ttf InfinixSans-Medium.ttf \
     TecnoSans.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf TecnoSans-Medium.ttf \
@@ -130,7 +130,6 @@ ui_print "      ✔ TranSans and UI fonts deployed"
 ui_print " "
 
 ui_print "  [+] Step 3/5: Deploying Noto Nastaliq Urdu Bold & Multilingual Fonts..."
-# Urdu Nastaliq
 for f in \
     NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
     NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf
@@ -138,7 +137,6 @@ do
     place "$UF" "$f"
 done
 
-# Arabic / Persian / Pashto SF Arabic Bold
 for f in \
     NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
     NotoNaskhArabicUI-Regular.ttf NotoNaskhArabicUI-Bold.ttf \
@@ -149,7 +147,6 @@ do
     place "$AF" "$f"
 done
 
-# Hebrew, Armenian, Georgian, Clocks
 for f in NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf NotoSansHebrew-Medium.ttf; do place "$HF" "$f"; done
 for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf NotoSansArmenian-Medium.ttf; do place "$AMF" "$f"; done
 for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf NotoSansGeorgian-Medium.ttf; do place "$GF" "$f"; done
@@ -203,7 +200,6 @@ for xml in /system/etc/fonts.xml /product/etc/fonts.xml /system_ext/etc/fonts.xm
     done
 done
 
-# Safe dynamic cache cleanup (never touches system folders)
 rm -rf /data/fonts/* 2>/dev/null
 rm -f  /data/system/font_fallback.xml 2>/dev/null
 rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
@@ -219,7 +215,6 @@ for pkg in com.facebook.orca com.facebook.katana com.facebook.lite \
     fi
 done
 
-# Permissions & SELinux Contexts
 set_perm_recursive "$MODPATH" 0 0 0755 0644
 for s in post-fs-data.sh service.sh action.sh; do
     [ -f "$MODPATH/$s" ] && set_perm "$MODPATH/$s" 0 0 0755
