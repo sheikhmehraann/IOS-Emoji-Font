@@ -1,6 +1,6 @@
 #!/system/bin/sh
 ##########################################################################################
-#  iOS Bold Font & iOS 26.4 Emoji - Professional Installer
+#  iOS Bold Font & iOS 26.4 Emoji - Professional Fast Installer
 # Author: sheikhmehraan
 ##########################################################################################
 
@@ -147,16 +147,6 @@ for f in NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf NotoSansHebrew-Mediu
 for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf NotoSansArmenian-Medium.ttf; do place "$AMF" "$f"; done
 for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf NotoSansGeorgian-Medium.ttf; do place "$GF" "$f"; done
 for f in AndroidClock.ttf GoogleSansClock-Regular.ttf; do place "$RF" "$f"; done
-
-# Deploy world language bold fallbacks
-for pdir in /system/fonts /product/fonts; do
-    [ -d "$pdir" ] || continue
-    for bfont in "$pdir"/*Bold*.ttf "$pdir"/*Bold*.otf; do
-        [ -f "$bfont" ] || continue
-        rname=$(basename "$bfont" | sed 's/Bold/Regular/g')
-        [ -f "$pdir/$rname" ] && place "$bfont" "$rname"
-    done
-done
 
 ui_print "      ✔ Multilingual typography deployed"
 ui_print " "
