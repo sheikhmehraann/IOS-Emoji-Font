@@ -200,10 +200,11 @@ rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
 rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 
 for pkg in com.facebook.orca com.facebook.katana com.facebook.lite \
-           com.facebook.mlite com.google.android.inputmethod.latin; do
+           com.facebook.mlite com.instagram.android com.whatsapp com.google.android.inputmethod.latin; do
     if pm list packages 2>/dev/null | grep -q "$pkg"; then
-        for sub in /cache /code_cache /app_webview /files/GCache; do
+        for sub in /cache /code_cache /app_webview /files/GCache /files/fonts; do
             rm -rf "/data/data/${pkg}${sub}" 2>/dev/null
+            rm -rf "/data/user_de/*/${pkg}${sub}" 2>/dev/null
         done
         am force-stop "$pkg" 2>/dev/null
     fi

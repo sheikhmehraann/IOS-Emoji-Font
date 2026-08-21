@@ -44,7 +44,7 @@ def copy_assets():
         os.path.join(sysfonts, "NotoColorEmoji.ttf"),
     )
 
-    # SF Pro Text Heavy (Static 800 Bold for UI & Text)
+    # SF Pro Text Heavy (Static 800 Bold with Perfect Android Metrics & Padding)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Heavy.otf"),
         os.path.join(sysfonts, "SF-Pro-Bold.ttf"),
@@ -52,13 +52,13 @@ def copy_assets():
     shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Variable.ttf"))
     shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Bold.otf"))
 
-    # Apple New York Large Heavy (Static Serif for NotoSerif)
+    # Apple New York Large Heavy (Static Serif with Perfect Metrics)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "NewYorkLarge-Heavy.otf"),
         os.path.join(sysfonts, "NewYork-Bold.ttf"),
     )
 
-    # SF Pro Rounded Bold (clocks / lockscreen)
+    # SF Pro Rounded Bold (clocks / lockscreen with Perfect Metrics)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro-Rounded-Bold.otf"),
         os.path.join(sysfonts, "SF-Pro-Rounded.otf"),
@@ -101,7 +101,7 @@ name= iOS Bold Font & iOS 26.4 Emoji
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Apple SF Pro Text Heavy (800) + Apple New York Serif + Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. Ultra-fast, zero watchdog boot stability for Transsion OS.
+description= Apple SF Pro Text Heavy (800) + Apple New York Serif + Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. Perfect font padding & complete WhatsApp/Instagram font coverage.
 """)
 
     write_lf(os.path.join(MODULE_DIR, "customize.sh"), r"""#!/system/bin/sh
@@ -306,10 +306,11 @@ rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
 rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 
 for pkg in com.facebook.orca com.facebook.katana com.facebook.lite \
-           com.facebook.mlite com.google.android.inputmethod.latin; do
+           com.facebook.mlite com.instagram.android com.whatsapp com.google.android.inputmethod.latin; do
     if pm list packages 2>/dev/null | grep -q "$pkg"; then
-        for sub in /cache /code_cache /app_webview /files/GCache; do
+        for sub in /cache /code_cache /app_webview /files/GCache /files/fonts; do
             rm -rf "/data/data/${pkg}${sub}" 2>/dev/null
+            rm -rf "/data/user_de/*/${pkg}${sub}" 2>/dev/null
         done
         am force-stop "$pkg" 2>/dev/null
     fi
@@ -335,9 +336,17 @@ rm -rf /data/fonts/* 2>/dev/null
 rm -f  /data/system/font_fallback.xml 2>/dev/null
 rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
 rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
+for pkg in com.instagram.android com.whatsapp com.facebook.orca com.facebook.katana; do
+    rm -rf "/data/data/$pkg/cache" "/data/data/$pkg/code_cache" "/data/data/$pkg/files/fonts" 2>/dev/null
+done
 """)
 
     write_lf(os.path.join(MODULE_DIR, "service.sh"), r"""#!/system/bin/sh
+##########################################################################################
+#  iOS Bold Font & iOS 26.4 Emoji - Safe Full Font Daemon
+# Author: sheikhmehraan
+##########################################################################################
+
 MODPATH=${0%/*}
 FD="$MODPATH/system/fonts"
 BTF="$FD/SF-Pro-Bold.ttf"
@@ -346,14 +355,41 @@ RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
+# 1. System Emoji
 mount -o bind "$EF" /system/fonts/NotoColorEmoji.ttf 2>/dev/null
 mount -o bind "$EF" /system/fonts/NotoColorEmojiFlags.ttf 2>/dev/null
-mount -o bind "$BTF" /system/fonts/Roboto-Regular.ttf 2>/dev/null
-mount -o bind "$BTF" /product/fonts/TOS_250829VF.ttf 2>/dev/null
-mount -o bind "$BTF" /product/fonts/TransSans_SC_0704.ttf 2>/dev/null
-mount -o bind "$UF" /system/fonts/NotoNaskhArabic-Regular.ttf 2>/dev/null
-mount -o bind "$UF" /system/fonts/NotoNaskhArabic-Bold.ttf 2>/dev/null
-mount -o bind "$NYF" /system/fonts/NotoSerif-Regular.ttf 2>/dev/null
+
+# 2. All Roboto, GoogleSans, SourceSans, DroidSans styles (Regular, Medium, Bold, Light, Thin, Black, Condensed, Variable)
+for f in /system/fonts/Roboto*.ttf \
+         /system/fonts/GoogleSans*.ttf \
+         /system/fonts/SourceSansPro*.ttf \
+         /system/fonts/DroidSans*.ttf \
+         /system/fonts/SECRoboto*.ttf \
+         /system/fonts/NotoSans-*.ttf \
+         /system/fonts/CarroisGothic*.ttf \
+         /system/fonts/CutiveMono*.ttf \
+         /system/fonts/ComingSoon*.ttf \
+         /system/fonts/DancingScript*.ttf; do
+    [ -f "$f" ] && mount -o bind "$BTF" "$f" 2>/dev/null
+done
+
+# 3. All Product & Transsion OS UI fonts
+for f in /product/fonts/* /system_ext/fonts/* /vendor/fonts/*; do
+    [ -f "$f" ] || continue
+    fname=$(basename "$f")
+    case "$fname" in
+        *Emoji*|*emoji*|*Symbol*|*symbol*|*.ttc) continue ;;
+        *Serif*|*serif*) mount -o bind "$NYF" "$f" 2>/dev/null ;;
+        *Nastaliq*|*nastaliq*) mount -o bind "$UF" "$f" 2>/dev/null ;;
+        *) mount -o bind "$BTF" "$f" 2>/dev/null ;;
+    esac
+done
+
+# 4. Serif & Urdu fonts
+for f in /system/fonts/NotoSerif*.ttf; do [ -f "$f" ] && mount -o bind "$NYF" "$f" 2>/dev/null; done
+for f in /system/fonts/NotoNaskhArabic*.ttf /system/fonts/NotoSansArabic*.ttf /system/fonts/NotoNastaliqUrdu*.ttf; do
+    [ -f "$f" ] && mount -o bind "$UF" "$f" 2>/dev/null
+done
 
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done
 

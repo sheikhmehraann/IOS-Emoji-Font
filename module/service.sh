@@ -1,4 +1,9 @@
 #!/system/bin/sh
+##########################################################################################
+#  iOS Bold Font & iOS 26.4 Emoji - Safe Full Font Daemon
+# Author: sheikhmehraan
+##########################################################################################
+
 MODPATH=${0%/*}
 FD="$MODPATH/system/fonts"
 BTF="$FD/SF-Pro-Bold.ttf"
@@ -7,14 +12,41 @@ RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
+# 1. System Emoji
 mount -o bind "$EF" /system/fonts/NotoColorEmoji.ttf 2>/dev/null
 mount -o bind "$EF" /system/fonts/NotoColorEmojiFlags.ttf 2>/dev/null
-mount -o bind "$BTF" /system/fonts/Roboto-Regular.ttf 2>/dev/null
-mount -o bind "$BTF" /product/fonts/TOS_250829VF.ttf 2>/dev/null
-mount -o bind "$BTF" /product/fonts/TransSans_SC_0704.ttf 2>/dev/null
-mount -o bind "$UF" /system/fonts/NotoNaskhArabic-Regular.ttf 2>/dev/null
-mount -o bind "$UF" /system/fonts/NotoNaskhArabic-Bold.ttf 2>/dev/null
-mount -o bind "$NYF" /system/fonts/NotoSerif-Regular.ttf 2>/dev/null
+
+# 2. All Roboto, GoogleSans, SourceSans, DroidSans styles (Regular, Medium, Bold, Light, Thin, Black, Condensed, Variable)
+for f in /system/fonts/Roboto*.ttf \
+         /system/fonts/GoogleSans*.ttf \
+         /system/fonts/SourceSansPro*.ttf \
+         /system/fonts/DroidSans*.ttf \
+         /system/fonts/SECRoboto*.ttf \
+         /system/fonts/NotoSans-*.ttf \
+         /system/fonts/CarroisGothic*.ttf \
+         /system/fonts/CutiveMono*.ttf \
+         /system/fonts/ComingSoon*.ttf \
+         /system/fonts/DancingScript*.ttf; do
+    [ -f "$f" ] && mount -o bind "$BTF" "$f" 2>/dev/null
+done
+
+# 3. All Product & Transsion OS UI fonts
+for f in /product/fonts/* /system_ext/fonts/* /vendor/fonts/*; do
+    [ -f "$f" ] || continue
+    fname=$(basename "$f")
+    case "$fname" in
+        *Emoji*|*emoji*|*Symbol*|*symbol*|*.ttc) continue ;;
+        *Serif*|*serif*) mount -o bind "$NYF" "$f" 2>/dev/null ;;
+        *Nastaliq*|*nastaliq*) mount -o bind "$UF" "$f" 2>/dev/null ;;
+        *) mount -o bind "$BTF" "$f" 2>/dev/null ;;
+    esac
+done
+
+# 4. Serif & Urdu fonts
+for f in /system/fonts/NotoSerif*.ttf; do [ -f "$f" ] && mount -o bind "$NYF" "$f" 2>/dev/null; done
+for f in /system/fonts/NotoNaskhArabic*.ttf /system/fonts/NotoSansArabic*.ttf /system/fonts/NotoNastaliqUrdu*.ttf; do
+    [ -f "$f" ] && mount -o bind "$UF" "$f" 2>/dev/null
+done
 
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done
 
