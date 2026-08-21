@@ -46,7 +46,6 @@ AMF="$FD/SF-Armenian.ttf"
 GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
-# Create nested partition directories under $MODPATH/system/
 mkdir -p "$MODPATH/system/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
@@ -74,7 +73,7 @@ done
 ui_print "      ✔ Variable fonts deployed"
 ui_print " "
 
-ui_print "  [+] Step 2/5: Deploying Apple SF Pro Bold over TranSans & System UI..."
+ui_print "  [+] Step 2/5: Deploying Apple SF Pro Bold over All UI, Serif & SourceSans fonts..."
 for f in \
     TranSans.ttf TranSans-Regular.ttf TranSans-Bold.ttf TranSans-Medium.ttf \
     TranSans-Italic.ttf TranSans-BoldItalic.ttf TranSans-Light.ttf TranSans-LightItalic.ttf \
@@ -91,6 +90,11 @@ for f in \
     InfinixSans.ttf InfinixSans-Regular.ttf InfinixSans-Bold.ttf InfinixSans-Medium.ttf \
     TecnoSans.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf TecnoSans-Medium.ttf \
     ItelSans.ttf ItelSans-Regular.ttf ItelSans-Bold.ttf \
+    SourceSansPro-Regular.ttf SourceSansPro-Bold.ttf SourceSansPro-SemiBold.ttf \
+    SourceSansPro-Italic.ttf SourceSansPro-BoldItalic.ttf SourceSansPro-SemiBoldItalic.ttf \
+    NotoSerif-Regular.ttf NotoSerif-Bold.ttf NotoSerif-Italic.ttf NotoSerif-BoldItalic.ttf \
+    NotoSans-Regular.ttf NotoSans-Bold.ttf NotoSans-Medium.ttf NotoSans-Italic.ttf \
+    NotoSans-BoldItalic.ttf NotoSans-Light.ttf NotoSans-Thin.ttf \
     Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-MediumItalic.ttf \
     Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf \
     Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf \
@@ -114,19 +118,16 @@ for f in \
     Miui-Regular.ttf Miui-Bold.ttf \
     OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.ttf \
     SysSans-En-Regular.ttf OnePlusSans-Regular.ttf OnePlusSans-Bold.ttf \
-    DroidSans.ttf DroidSans-Bold.ttf \
-    NotoSans-Regular.ttf NotoSans-Bold.ttf NotoSans-Medium.ttf NotoSans-Italic.ttf \
-    NotoSans-BoldItalic.ttf NotoSans-Light.ttf NotoSans-Thin.ttf \
-    NotoSerif-Regular.ttf NotoSerif-Bold.ttf \
+    DroidSans.ttf DroidSans-Bold.ttf DroidSansMono.ttf \
     CutiveMono.ttf ComingSoon.ttf DancingScript-Regular.ttf DancingScript-Bold.ttf \
-    CarroisGothicSC-Regular.ttf
+    CarroisGothicSC-Regular.ttf Zawgyi-One.ttf myanmar_shadow.ttf
 do
     case "$f" in
         *.otf) place "$BOF" "$f" ;;
         *)     place "$BTF" "$f" ;;
     esac
 done
-ui_print "      ✔ TranSans and UI fonts deployed"
+ui_print "      ✔ All UI, Serif, and SourceSans fonts deployed"
 ui_print " "
 
 ui_print "  [+] Step 3/5: Deploying Noto Nastaliq Urdu Bold & Multilingual Fonts..."
@@ -164,7 +165,7 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
         fname=$(basename "$fpath")
         [ -f "$MODPATH/system/fonts/$fname" ] && continue
         case "$fname" in
-            *Emoji*|*emoji*|*Symbol*|*symbol*|*Math*|*math*|*Mono*|*.ttc) continue ;;
+            *Emoji*|*emoji*|*Symbol*|*symbol*|*Math*|*math*|*.ttc) continue ;;
             *Clock*|*clock*)                     place "$RF"  "$fname" ;;
             *Nastaliq*|*nastaliq*|*Urdu*|*urdu*) place "$UF"  "$fname" ;;
             *Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
@@ -173,7 +174,8 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
             *Armenian*|*armenian*)                place "$AMF" "$fname" ;;
             *Georgian*|*georgian*)                place "$GF"  "$fname" ;;
             TOS_VF*|*Variable*|*VF*|*Flex*)       place "$VF"  "$fname" ;;
-            TranSans*|TransSans*|Infinix*|Tecno*|Itel*) place "$BTF" "$fname" ;;
+            TranSans*|TransSans*|Infinix*|Tecno*|Itel*|SourceSans*|NotoSerif*|NotoSans*)
+                                                  place "$BTF" "$fname" ;;
             *.otf)                                place "$BOF" "$fname" ;;
             *)                                    place "$BTF" "$fname" ;;
         esac
@@ -186,7 +188,7 @@ ui_print " "
 ui_print "  [+] Step 5/5: Deploying iOS 26.4 Emoji & Purging System Caches..."
 for f in SamsungColorEmoji.ttf LGNotoColorEmoji.ttf HTC_ColorEmoji.ttf \
          AndroidEmoji-htc.ttf ColorUniEmoji.ttf DcmColorEmoji.ttf \
-         CombinedColorEmoji.ttf NotoColorEmojiLegacy.ttf NotoColorEmoji-Flags.ttf; do
+         CombinedColorEmoji.ttf NotoColorEmojiLegacy.ttf NotoColorEmoji-Flags.ttf NotoColorEmojiFlags.ttf; do
     if [ -f "/system/fonts/$f" ] || [ -f "/product/fonts/$f" ] || [ -f "/system_ext/fonts/$f" ]; then
         place "$EF" "$f"
     fi

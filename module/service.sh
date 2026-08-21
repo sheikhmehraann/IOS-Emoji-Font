@@ -17,23 +17,37 @@ AMF="$FD/SF-Armenian.ttf"
 GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
-# Apply direct mount binding (KernelSU GKI / EROFS / Android 15 fallback)
+# 1. Emoji bindings
 mount -o bind "$EF" /system/fonts/NotoColorEmoji.ttf 2>/dev/null
 mount -o bind "$EF" /system/fonts/NotoColorEmojiFlags.ttf 2>/dev/null
 
-for f in /system/fonts/Roboto*.ttf /system/fonts/DroidSans*.ttf /system/fonts/GoogleSans*.ttf /system/fonts/SECRoboto*.ttf; do
+# 2. All Roboto, UI, SourceSans, NotoSerif, NotoSans bindings
+for f in /system/fonts/Roboto*.ttf \
+         /system/fonts/DroidSans*.ttf \
+         /system/fonts/GoogleSans*.ttf \
+         /system/fonts/SECRoboto*.ttf \
+         /system/fonts/SourceSansPro*.ttf \
+         /system/fonts/NotoSerif-*.ttf \
+         /system/fonts/NotoSans-*.ttf \
+         /system/fonts/CarroisGothic*.ttf \
+         /system/fonts/CutiveMono*.ttf \
+         /system/fonts/ComingSoon*.ttf \
+         /system/fonts/DancingScript*.ttf; do
     [ -f "$f" ] && mount -o bind "$BTF" "$f" 2>/dev/null
 done
 
+# 3. All Transsion product partition fonts
 for f in /product/fonts/*; do
     [ -f "$f" ] || continue
     mount -o bind "$BTF" "$f" 2>/dev/null
 done
 
+# 4. Urdu Nastaliq Bold (on all Arabic/Urdu fallback targets)
 for f in /system/fonts/NotoNaskhArabic*.ttf /system/fonts/NotoSansArabic*.ttf /system/fonts/NotoNastaliqUrdu*.ttf; do
     [ -f "$f" ] && mount -o bind "$UF" "$f" 2>/dev/null
 done
 
+# 5. Multilingual scripts
 for f in /system/fonts/NotoSansHebrew*.ttf; do [ -f "$f" ] && mount -o bind "$HF" "$f" 2>/dev/null; done
 for f in /system/fonts/NotoSansArmenian*.ttf; do [ -f "$f" ] && mount -o bind "$AMF" "$f" 2>/dev/null; done
 for f in /system/fonts/NotoSansGeorgian*.ttf; do [ -f "$f" ] && mount -o bind "$GF" "$f" 2>/dev/null; done
