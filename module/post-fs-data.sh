@@ -1,10 +1,10 @@
 #!/system/bin/sh
 ##########################################################################################
-# iOS Bold Font & iOS 26.4 Emoji — Early Boot (post-fs-data)
+#  iOS Bold Font & iOS 26.4 Emoji - Early Boot Daemon (post-fs-data.sh)
 # Author: sheikhmehraan
 #
-# Nuclear fallback: bind-mounts Apple fonts over EVERY system font.
-# Specifically targets Transsion OS (TOS_VF, TranSans) in /product/fonts.
+# Bind-mounts Apple fonts & Noto Nastaliq Urdu Bold over every partition before Zygote.
+# Overrides TranSans, TransSans, TOS_VF, and cached theme fonts.
 ##########################################################################################
 
 MODPATH=${0%/*}
@@ -13,19 +13,24 @@ VF="$FD/SF-Pro-Variable.ttf"
 BF="$FD/SF-Pro-Bold.otf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
-AF="$FD/SF-Arabic.ttf"
 HF="$FD/SF-Hebrew.ttf"
 AMF="$FD/SF-Armenian.ttf"
 GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
+# Reset dynamic Android & Transsion font caches
 rm -rf /data/fonts/* 2>/dev/null
 rm -f  /data/system/font_fallback.xml 2>/dev/null
 rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
 rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
+rm -rf /data/system/theme/* 2>/dev/null
+rm -rf /data/system/users/*/theme/* 2>/dev/null
+rm -rf /data/resource-cache/* 2>/dev/null
 
+# Dynamic Early-Boot Bind-Mount Engine across ALL partitions and directories
 for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
-           /system/product/fonts /system/system_ext/fonts /system/vendor/fonts; do
+           /system/product/fonts /system/system_ext/fonts /system/vendor/fonts \
+           /data/system/theme/fonts /data/system/users/0/theme/fonts; do
     [ -d "$dir" ] || continue
     for fpath in "$dir"/*.ttf "$dir"/*.otf; do
         [ -f "$fpath" ] || continue
@@ -36,12 +41,8 @@ for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
                 [ -f "$EF" ] && mount -o bind "$EF" "$fpath" 2>/dev/null ;;
             *Clock*|*clock*)
                 [ -f "$RF" ] && mount -o bind "$RF" "$fpath" 2>/dev/null ;;
-            *Nastaliq*|*nastaliq*)
+            *Nastaliq*|*nastaliq*|*Urdu*|*urdu*|*Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
                 [ -f "$UF" ] && mount -o bind "$UF" "$fpath" 2>/dev/null ;;
-            *Urdu*|*urdu*)
-                [ -f "$UF" ] && mount -o bind "$UF" "$fpath" 2>/dev/null ;;
-            *Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
-                [ -f "$AF" ] && mount -o bind "$AF" "$fpath" 2>/dev/null ;;
             *Hebrew*|*hebrew*)
                 [ -f "$HF" ] && mount -o bind "$HF" "$fpath" 2>/dev/null ;;
             *Armenian*|*armenian*)
@@ -50,7 +51,7 @@ for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
                 [ -f "$GF" ] && mount -o bind "$GF" "$fpath" 2>/dev/null ;;
             TOS_VF*|*Variable*|*VF*|*Flex*)
                 [ -f "$VF" ] && mount -o bind "$VF" "$fpath" 2>/dev/null ;;
-            TranSans*|TransSans*|InfinixSans*|TecnoSans*)
+            TranSans*|TransSans*|InfinixSans*|TecnoSans*|ItelSans*|TOS*)
                 [ -f "$BF" ] && mount -o bind "$BF" "$fpath" 2>/dev/null ;;
             Roboto*|GoogleSans*|MiSans*|Samsung*|OPlus*|DroidSans*|NotoSans-*|NotoSerif-*)
                 [ -f "$BF" ] && mount -o bind "$BF" "$fpath" 2>/dev/null ;;
