@@ -25,7 +25,7 @@ def write_lf_file(filepath, content):
     with open(filepath, "wb") as f:
         f.write(content.replace("\r\n", "\n").encode("utf-8"))
 
-def patch_variable_font_to_bold(in_path, out_path, target_weight=750.0):
+def patch_variable_font_to_bold(in_path, out_path, target_weight=650.0):
     with open(in_path, "rb") as f:
         data = bytearray(f.read())
         
@@ -37,7 +37,7 @@ def patch_variable_font_to_bold(in_path, out_path, target_weight=750.0):
         length = struct.unpack(">I", data[24+i*16:28+i*16])[0]
         tables[tag] = (offset, length, 12+i*16)
         
-    # 1. Patch fvar table: Clamp min and default weight to target_weight (Bold/Heavy)
+    # 1. Patch fvar table: Clamp min and default weight to target_weight (Clean iOS Bold)
     if "fvar" in tables:
         off, length, rec_off = tables["fvar"]
         axes_start = off + struct.unpack(">H", data[off+4:off+6])[0]
@@ -49,13 +49,13 @@ def patch_variable_font_to_bold(in_path, out_path, target_weight=750.0):
             tag_name = data[pos:pos+4].decode("latin-1")
             if tag_name == "wght":
                 fixed_val = int(target_weight * 65536)
-                struct.pack_into(">i", data, pos+4, fixed_val)  # min_val = 750
-                struct.pack_into(">i", data, pos+8, fixed_val)  # def_val = 750
+                struct.pack_into(">i", data, pos+4, fixed_val)  # min_val = 650
+                struct.pack_into(">i", data, pos+8, fixed_val)  # def_val = 650
                 
     # 2. Patch OS/2 table
     if "OS/2" in tables:
         off, length, rec_off = tables["OS/2"]
-        struct.pack_into(">H", data, off+4, int(target_weight))
+        struct.pack_into(">H", data, off+4, 700)  # Standard Bold
         sel = struct.unpack(">H", data[off+62:off+64])[0]
         sel |= 0x0020  # Set Bold bit (bit 5)
         struct.pack_into(">H", data, off+62, sel)
@@ -102,55 +102,53 @@ def copy_assets():
     shutil.copy2(emoji_src, os.path.join(MODULE_DIR, "system", "fonts", "NotoColorEmoji.ttf"))
     print("  + system/fonts/NotoColorEmoji.ttf")
 
-    print("[*] Patching & deploying Multilingual Apple SF Pro Suite...")
-    # 1. SF-Pro Variable Bold
+    print("[*] Patching & deploying Multilingual Apple SF Pro Suite (Clean iOS Bold 650)...")
+    # 1. SF-Pro Variable Bold (Clean iOS Bold, weight 650)
     patch_variable_font_to_bold(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro.ttf"),
         os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Variable.ttf"),
-        750.0
+        650.0
     )
-    print("  + SF-Pro-Variable.ttf (Enforced 750 Bold Axis)")
+    print("  + SF-Pro-Variable.ttf (Enforced 650 Clean Bold Axis)")
 
-    # 2. SF-Pro Text Heavy & Bold
-    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Heavy.otf"), os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Heavy.otf"))
-    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Black.otf"), os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Black.otf"))
+    # 2. SF-Pro Text Bold (Authentic Apple Bold)
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Bold.otf"), os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Bold.otf"))
+    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Bold.otf"), os.path.join(MODULE_DIR, "system", "fonts", "Roboto-Regular.ttf"))
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Rounded-Bold.otf"), os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Rounded.otf"))
-    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Heavy.otf"), os.path.join(MODULE_DIR, "system", "fonts", "Roboto-Regular.ttf"))
-    print("  + SF-Pro-Heavy.otf, SF-Pro-Black.otf, SF-Pro-Bold.otf, SF-Pro-Rounded.otf, Roboto-Regular.ttf")
+    print("  + SF-Pro-Bold.otf, SF-Pro-Rounded.otf, Roboto-Regular.ttf")
 
-    # 3. Multilingual Apple Scripts (Arabic/Urdu, Hebrew, Armenian, Georgian)
+    # 3. Multilingual Apple Scripts (SF Arabic/Urdu, SF Hebrew, SF Armenian, SF Georgian)
     patch_variable_font_to_bold(
         os.path.join(APPLE_FONTS_DIR, "SF-Arabic.ttf"),
         os.path.join(MODULE_DIR, "system", "fonts", "SF-Arabic.ttf"),
-        750.0
+        650.0
     )
     patch_variable_font_to_bold(
         os.path.join(APPLE_FONTS_DIR, "SF-Hebrew.ttf"),
         os.path.join(MODULE_DIR, "system", "fonts", "SF-Hebrew.ttf"),
-        750.0
+        650.0
     )
     patch_variable_font_to_bold(
         os.path.join(APPLE_FONTS_DIR, "SF-Armenian.ttf"),
         os.path.join(MODULE_DIR, "system", "fonts", "SF-Armenian.ttf"),
-        750.0
+        650.0
     )
     patch_variable_font_to_bold(
         os.path.join(APPLE_FONTS_DIR, "SF-Georgian.ttf"),
         os.path.join(MODULE_DIR, "system", "fonts", "SF-Georgian.ttf"),
-        750.0
+        650.0
     )
-    print("  + Multilingual Scripts: SF-Arabic.ttf (Urdu/Arabic), SF-Hebrew.ttf, SF-Armenian.ttf, SF-Georgian.ttf (Bold Enforced)")
+    print("  + Multilingual Bold Scripts: SF-Arabic.ttf (Bold Urdu/Arabic), SF-Hebrew.ttf, SF-Armenian.ttf, SF-Georgian.ttf")
 
 def write_module_scripts():
-    print("[*] Generating universal multi-partition and multilingual deployment scripts...")
+    print("[*] Generating universal multi-partition, Transsion OS, and multilingual deployment scripts...")
 
     module_prop = """id=ios_bold_font_emoji
 name= iOS Bold Font & iOS 26.4 Emoji
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Systemlessly replaces UI fonts with authentic Apple SF Pro (Heavy/Bold) across ALL languages and system emojis with iOS 26.4 Apple Color Emoji. Features GMS override protection, early post-fs-data mounting, and full OverlayFS support.
+description= Systemlessly replaces UI fonts with clean authentic Apple SF Pro (Bold) across Transsion OS, AOSP, and all languages (Urdu, Arabic, Hebrew, Indic, CJK, Latin) and system emojis with iOS 26.4 Apple Color Emoji.
 """
 
     post_fs_data_sh = r"""#!/system/bin/sh
@@ -164,8 +162,6 @@ description= Systemlessly replaces UI fonts with authentic Apple SF Pro (Heav
 MODPATH=${0%/*}
 FONT_DIR="$MODPATH/system/fonts"
 VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
-HEAVY_FONT="$FONT_DIR/SF-Pro-Heavy.otf"
-BLACK_FONT="$FONT_DIR/SF-Pro-Black.otf"
 BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
 ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
 ARABIC_FONT="$FONT_DIR/SF-Arabic.ttf"
@@ -184,8 +180,8 @@ rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 mkdir -p /data/fonts 2>/dev/null
 chmod 755 /data/fonts 2>/dev/null
 
-# Early-boot Dynamic Bind-Mount across ALL active partitions & fonts
-for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /system/product/fonts /system/system_ext/fonts; do
+# Early-boot Dynamic Bind-Mount across ALL active partitions & fonts (Transsion OS, AOSP, OEM)
+for target_dir in /product/fonts /system_ext/fonts /system/fonts /vendor/fonts /system/product/fonts /system/system_ext/fonts; do
     if [ -d "$target_dir" ]; then
         for fpath in "$target_dir"/*.ttf "$target_dir"/*.otf; do
             [ -f "$fpath" ] || continue
@@ -201,7 +197,7 @@ for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /
                         mount -o bind "$ROUND_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
-                *Arabic*|*arabic*|*Urdu*|*urdu*)
+                *Arabic*|*arabic*|*Urdu*|*urdu*|*Nastaliq*|*nastaliq*)
                     if [ -f "$ARABIC_FONT" ]; then
                         mount -o bind "$ARABIC_FONT" "$fpath" 2>/dev/null
                     fi
@@ -221,15 +217,20 @@ for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /
                         mount -o bind "$GEORGIAN_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
-                *Variable*|*VF*|*Flex*)
+                # Transsion OS (TOS_VF, TranSansShell, TranSans) & Android Variable Fonts
+                TOS_VF*|*Variable*|*VF*|*Flex*)
                     if [ -f "$VAR_FONT" ]; then
                         mount -o bind "$VAR_FONT" "$fpath" 2>/dev/null
-                    elif [ -f "$HEAVY_FONT" ]; then
-                        mount -o bind "$HEAVY_FONT" "$fpath" 2>/dev/null
+                    elif [ -f "$BOLD_FONT" ]; then
+                        mount -o bind "$BOLD_FONT" "$fpath" 2>/dev/null
+                    fi
+                    ;;
+                TranSans*|TransSans*|InfinixSans*|TecnoSans*|Roboto*|GoogleSans*|MiSans*|SamsungOne*|OPlusSans*)
+                    if [ -f "$BOLD_FONT" ]; then
+                        mount -o bind "$BOLD_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
                 *NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansGurmukhi*|*NotoSansGujarati*|*NotoSansOriya*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansTibetan*|*NotoSansEthiopic*|*NotoSansCherokee*|*NotoSansCanadianAboriginal*|*NotoSansCJK*|*NotoSerifCJK*|*SourceHanSans*)
-                    # If this is a regular/light font and a bold version exists on the device, bind-mount bold over it!
                     case "$fname" in
                         *Regular*|*Light*|*Thin*|*Medium*)
                             bold_candidate=$(echo "$fpath" | sed -e 's/Regular/Bold/g' -e 's/Light/Bold/g' -e 's/Thin/Bold/g' -e 's/Medium/Bold/g')
@@ -241,14 +242,14 @@ for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /
                     ;;
                 *Symbol*|*symbol*|*Math*|*math*) ;;
                 *)
-                    if [ -f "$MODPATH/system/fonts/$fname" ]; then
-                        mount -o bind "$MODPATH/system/fonts/$fname" "$fpath" 2>/dev/null
-                    elif [ -f "$MODPATH/product/fonts/$fname" ]; then
+                    if [ -f "$MODPATH/product/fonts/$fname" ]; then
                         mount -o bind "$MODPATH/product/fonts/$fname" "$fpath" 2>/dev/null
                     elif [ -f "$MODPATH/system_ext/fonts/$fname" ]; then
                         mount -o bind "$MODPATH/system_ext/fonts/$fname" "$fpath" 2>/dev/null
-                    elif [ -f "$HEAVY_FONT" ]; then
-                        mount -o bind "$HEAVY_FONT" "$fpath" 2>/dev/null
+                    elif [ -f "$MODPATH/system/fonts/$fname" ]; then
+                        mount -o bind "$MODPATH/system/fonts/$fname" "$fpath" 2>/dev/null
+                    elif [ -f "$BOLD_FONT" ]; then
+                        mount -o bind "$BOLD_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
             esac
@@ -298,8 +299,6 @@ ui_print " "
 
 FONT_DIR="$MODPATH/system/fonts"
 VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
-HEAVY_FONT="$FONT_DIR/SF-Pro-Heavy.otf"
-BLACK_FONT="$FONT_DIR/SF-Pro-Black.otf"
 BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
 ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
 ARABIC_FONT="$FONT_DIR/SF-Arabic.ttf"
@@ -363,9 +362,9 @@ mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/vendor/fonts" 2>/dev/null
 
-ui_print "  [+] Step 1/4: Injecting Apple SF Pro Heavy & Multilingual Bold Typography..."
+ui_print "  [+] Step 1/4: Injecting Apple SF Pro Bold & Transsion OS Typography..."
 
-# 1. Variable Font Targets (Android 12-16 Variable Font Engines)
+# 1. Variable Font Targets (Transsion TOS_VF, AOSP Roboto-VariableFont, GoogleSansFlex)
 var_targets="
 Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf RobotoFlex-Regular.ttf
 TOS_VF.ttf TOS_VF_SC.ttf
@@ -392,8 +391,9 @@ for f in $clock_targets; do
     cp -f "$ROUND_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
 done
 
-# 3. Multilingual Scripts (SF Arabic/Urdu, SF Hebrew, SF Armenian, SF Georgian)
+# 3. Multilingual Scripts: Bold Urdu & Arabic (SF Arabic Bold), Hebrew, Armenian, Georgian
 arabic_targets="
+NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf
 NotoSansArabic-Regular.ttf NotoSansArabic-Bold.ttf NotoSansArabic-Medium.ttf
 NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf NotoNaskhArabicUI-Regular.ttf NotoNaskhArabicUI-Bold.ttf
 "
@@ -426,32 +426,32 @@ for f in $georgian_targets; do
     cp -f "$GEORGIAN_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
 done
 
-# 4. Heavy / Bold UI Font Targets (Apple SF Pro Heavy)
-heavy_targets="
+# 4. Transsion OS (TOS, HiOS, XOS) & Core UI Bold Font Targets
+bold_targets="
+TranSansShell.ttf TranSansSCShell.ttf TranSans_Regular.ttf TranSans_Medium.ttf TranSans_Bold.ttf TranSans_Italic.ttf TranSans_SC.ttf TranSans_TC.ttf
+TransSans-Regular.ttf TransSans-Medium.ttf TransSans-Bold.ttf TransSans_Italic.ttf TransSans_SC.ttf TransSans_Thai.ttf
+InfinixSans-Regular.ttf InfinixSans-Bold.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf
 Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf
 RobotoStatic-Regular.ttf RobotoStatic-Bold.ttf RobotoStatic-Medium.ttf RobotoStatic-Italic.ttf RobotoStatic-BoldItalic.ttf RobotoStatic-Light.ttf RobotoStatic-Thin.ttf RobotoStatic-Black.ttf
 RobotoCondensed-Regular.ttf RobotoCondensed-Bold.ttf RobotoCondensed-Italic.ttf RobotoCondensed-BoldItalic.ttf RobotoCondensed-Light.ttf RobotoCondensed-LightItalic.ttf RobotoCondensed-Medium.ttf RobotoCondensed-MediumItalic.ttf
 GoogleSans-Regular.ttf GoogleSans-Medium.ttf GoogleSans-Bold.ttf GoogleSans-Italic.ttf GoogleSans-BoldItalic.ttf GoogleSans-MediumItalic.ttf
 GoogleSansText-Regular.ttf GoogleSansText-Medium.ttf GoogleSansText-Bold.ttf GoogleSansText-Italic.ttf GoogleSansText-BoldItalic.ttf GoogleSansText-MediumItalic.ttf
 GS-Regular.ttf GS-Medium.ttf GS-Bold.ttf GS-Italic.ttf
-TranSansShell.ttf TranSansSCShell.ttf TranSans_Regular.ttf TranSans_Medium.ttf TranSans_Bold.ttf TranSans_Italic.ttf TranSans_SC.ttf TranSans_TC.ttf
-TransSans-Regular.ttf TransSans-Medium.ttf TransSans-Bold.ttf TransSans_Italic.ttf TransSans_SC.ttf TransSans_Thai.ttf
-InfinixSans-Regular.ttf InfinixSans-Bold.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf
 SECRobotoLight-Regular.ttf SECRobotoLight-Bold.ttf SECRoboto-Regular.ttf SECRoboto-Bold.ttf SamsungOne-400.ttf SamsungOne-500.ttf SamsungOne-600.ttf SamsungOne-700.ttf SamsungSans-Regular.ttf SamsungSans-Bold.ttf
 MiSans-Regular.ttf MiSans-Medium.ttf MiSans-Demibold.ttf MiSans-Bold.ttf MiSans-Heavy.ttf MiSans-Light.ttf MiSans-Thin.ttf MiSans-Normal.ttf MiSans-Semibold.ttf MiSansLatin-Regular.ttf MiSansLatin-Bold.ttf Miui-Regular.ttf Miui-Bold.ttf
 OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.ttf SysSans-En-Regular.ttf OnePlusSans-Regular.ttf OnePlusSans-Bold.ttf
 "
-for f in $heavy_targets; do
-    cp -f "$HEAVY_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
-    cp -f "$HEAVY_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
-    cp -f "$HEAVY_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
-    cp -f "$HEAVY_FONT" "$MODPATH/vendor/fonts/$f" 2>/dev/null
-    cp -f "$HEAVY_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
-    cp -f "$HEAVY_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
+for f in $bold_targets; do
+    cp -f "$BOLD_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$BOLD_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$BOLD_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+    cp -f "$BOLD_FONT" "$MODPATH/vendor/fonts/$f" 2>/dev/null
+    cp -f "$BOLD_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
+    cp -f "$BOLD_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
 done
 
 # 5. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI or script font
-for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
+for pdir in /product/fonts /system_ext/fonts /system/fonts /vendor/fonts; do
     if [ -d "$pdir" ]; then
         sub="${pdir#/}"
         for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
@@ -463,7 +463,7 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
                     cp -f "$ROUND_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$ROUND_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
-                *Arabic*|*arabic*|*Urdu*|*urdu*)
+                *Arabic*|*arabic*|*Urdu*|*urdu*|*Nastaliq*|*nastaliq*)
                     cp -f "$ARABIC_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$ARABIC_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
@@ -479,7 +479,7 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
                     cp -f "$GEORGIAN_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$GEORGIAN_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
-                *Variable*|*VF*|*Flex*)
+                TOS_VF*|*Variable*|*VF*|*Flex*)
                     cp -f "$VAR_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$VAR_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
@@ -496,15 +496,15 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
                     ;;
                 *Symbol*|*symbol*|*Math*|*math*) ;;
                 *)
-                    cp -f "$HEAVY_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
-                    cp -f "$HEAVY_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                    cp -f "$BOLD_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$BOLD_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
             esac
         done
     fi
 done
 
-ui_print "      ✔ Multilingual & multi-partition coverage generated successfully"
+ui_print "      ✔ Multilingual, Transsion OS, and multi-partition coverage complete"
 ui_print " "
 
 ui_print "  [+] Step 2/4: Deploying iOS 26.4 Apple Color Emoji..."

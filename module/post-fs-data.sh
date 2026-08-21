@@ -9,8 +9,6 @@
 MODPATH=${0%/*}
 FONT_DIR="$MODPATH/system/fonts"
 VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
-HEAVY_FONT="$FONT_DIR/SF-Pro-Heavy.otf"
-BLACK_FONT="$FONT_DIR/SF-Pro-Black.otf"
 BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
 ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
 ARABIC_FONT="$FONT_DIR/SF-Arabic.ttf"
@@ -29,8 +27,8 @@ rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 mkdir -p /data/fonts 2>/dev/null
 chmod 755 /data/fonts 2>/dev/null
 
-# Early-boot Dynamic Bind-Mount across ALL active partitions & fonts
-for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /system/product/fonts /system/system_ext/fonts; do
+# Early-boot Dynamic Bind-Mount across ALL active partitions & fonts (Transsion OS, AOSP, OEM)
+for target_dir in /product/fonts /system_ext/fonts /system/fonts /vendor/fonts /system/product/fonts /system/system_ext/fonts; do
     if [ -d "$target_dir" ]; then
         for fpath in "$target_dir"/*.ttf "$target_dir"/*.otf; do
             [ -f "$fpath" ] || continue
@@ -46,7 +44,7 @@ for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /
                         mount -o bind "$ROUND_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
-                *Arabic*|*arabic*|*Urdu*|*urdu*)
+                *Arabic*|*arabic*|*Urdu*|*urdu*|*Nastaliq*|*nastaliq*)
                     if [ -f "$ARABIC_FONT" ]; then
                         mount -o bind "$ARABIC_FONT" "$fpath" 2>/dev/null
                     fi
@@ -66,15 +64,20 @@ for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /
                         mount -o bind "$GEORGIAN_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
-                *Variable*|*VF*|*Flex*)
+                # Transsion OS (TOS_VF, TranSansShell, TranSans) & Android Variable Fonts
+                TOS_VF*|*Variable*|*VF*|*Flex*)
                     if [ -f "$VAR_FONT" ]; then
                         mount -o bind "$VAR_FONT" "$fpath" 2>/dev/null
-                    elif [ -f "$HEAVY_FONT" ]; then
-                        mount -o bind "$HEAVY_FONT" "$fpath" 2>/dev/null
+                    elif [ -f "$BOLD_FONT" ]; then
+                        mount -o bind "$BOLD_FONT" "$fpath" 2>/dev/null
+                    fi
+                    ;;
+                TranSans*|TransSans*|InfinixSans*|TecnoSans*|Roboto*|GoogleSans*|MiSans*|SamsungOne*|OPlusSans*)
+                    if [ -f "$BOLD_FONT" ]; then
+                        mount -o bind "$BOLD_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
                 *NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansGurmukhi*|*NotoSansGujarati*|*NotoSansOriya*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansTibetan*|*NotoSansEthiopic*|*NotoSansCherokee*|*NotoSansCanadianAboriginal*|*NotoSansCJK*|*NotoSerifCJK*|*SourceHanSans*)
-                    # If this is a regular/light font and a bold version exists on the device, bind-mount bold over it!
                     case "$fname" in
                         *Regular*|*Light*|*Thin*|*Medium*)
                             bold_candidate=$(echo "$fpath" | sed -e 's/Regular/Bold/g' -e 's/Light/Bold/g' -e 's/Thin/Bold/g' -e 's/Medium/Bold/g')
@@ -86,14 +89,14 @@ for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /
                     ;;
                 *Symbol*|*symbol*|*Math*|*math*) ;;
                 *)
-                    if [ -f "$MODPATH/system/fonts/$fname" ]; then
-                        mount -o bind "$MODPATH/system/fonts/$fname" "$fpath" 2>/dev/null
-                    elif [ -f "$MODPATH/product/fonts/$fname" ]; then
+                    if [ -f "$MODPATH/product/fonts/$fname" ]; then
                         mount -o bind "$MODPATH/product/fonts/$fname" "$fpath" 2>/dev/null
                     elif [ -f "$MODPATH/system_ext/fonts/$fname" ]; then
                         mount -o bind "$MODPATH/system_ext/fonts/$fname" "$fpath" 2>/dev/null
-                    elif [ -f "$HEAVY_FONT" ]; then
-                        mount -o bind "$HEAVY_FONT" "$fpath" 2>/dev/null
+                    elif [ -f "$MODPATH/system/fonts/$fname" ]; then
+                        mount -o bind "$MODPATH/system/fonts/$fname" "$fpath" 2>/dev/null
+                    elif [ -f "$BOLD_FONT" ]; then
+                        mount -o bind "$BOLD_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
             esac
