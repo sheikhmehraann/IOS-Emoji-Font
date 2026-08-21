@@ -44,9 +44,9 @@ def copy_assets():
         os.path.join(sysfonts, "NotoColorEmoji.ttf"),
     )
 
-    # Pure TrueType Static SF Pro Heavy (800 Bold, Perfect Android Metrics & Zero Padding Distortion)
+    # Master Bold TrueType SF Pro Heavy (900 Bold, Perfect Android Metrics & Zero Padding Distortion)
     shutil.copy2(
-        os.path.join(APPLE_FONTS_DIR, "SF-Pro-Bold-PureStatic.ttf"),
+        os.path.join(APPLE_FONTS_DIR, "SF-Pro-MasterBold.ttf"),
         os.path.join(sysfonts, "SF-Pro-Bold.ttf"),
     )
     shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Variable.ttf"))
@@ -101,12 +101,12 @@ name= iOS Bold Font & iOS 26.4 Emoji
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Apple SF Pro Pure TrueType Heavy Bold (800) + Apple New York Serif + Compact Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. 100% full coverage for TranSans, Roboto, WhatsApp, Instagram, and stock-perfect padding.
+description= Apple SF Pro Master Bold TrueType (900) + Apple New York Serif + Compact Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. Full coverage for TranSans, Roboto, WhatsApp, and in-app font locks.
 """)
 
     write_lf(os.path.join(MODULE_DIR, "customize.sh"), r"""#!/system/bin/sh
 ##########################################################################################
-#  iOS Bold Font & iOS 26.4 Emoji - Professional Fast TrueType Installer
+#  iOS Bold Font & iOS 26.4 Emoji - Professional Master TrueType Installer
 # Author: sheikhmehraan
 ##########################################################################################
 
@@ -164,7 +164,7 @@ place() {
     cp -f "$src" "$MODPATH/system/vendor/fonts/$name" 2>/dev/null
 }
 
-ui_print "  [+] Step 1/5: Deploying Pure TrueType Apple SF Pro Heavy over All UI Fonts..."
+ui_print "  [+] Step 1/5: Deploying Master TrueType Apple SF Pro Heavy over All UI Fonts..."
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     [ -d "$pdir" ] || continue
     for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
@@ -221,6 +221,15 @@ rm -rf /data/fonts/* 2>/dev/null
 rm -f  /data/system/font_fallback.xml 2>/dev/null
 rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
 rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
+
+# Lock WhatsApp in-app downloaded font
+if [ -d "/data/data/com.whatsapp" ]; then
+    mkdir -p "/data/data/com.whatsapp/files/NetworkResource" 2>/dev/null
+    chattr -i "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+    cp -f "$BTF" "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+    chmod 444 "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+    chattr +i "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+fi
 
 for pkg in com.facebook.orca com.facebook.katana com.facebook.lite \
            com.facebook.mlite com.instagram.android com.whatsapp com.google.android.inputmethod.latin; do
@@ -311,11 +320,20 @@ done
 
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done
 
-# Replace in-app emoji fonts
+# Replace in-app emoji & fonts
 if [ -f "$EF" ]; then
     for font in $(find /data/data /data/user/0 -iname "*emoji*.ttf" 2>/dev/null); do
         [ -w "$font" ] && cp -f "$EF" "$font" && chmod 644 "$font" 2>/dev/null
     done
+fi
+
+# WhatsApp in-app font lock
+if [ -d "/data/data/com.whatsapp" ]; then
+    mkdir -p "/data/data/com.whatsapp/files/NetworkResource" 2>/dev/null
+    chattr -i "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+    cp -f "$BTF" "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+    chmod 444 "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+    chattr +i "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
 fi
 
 for pkg in com.facebook.orca com.facebook.katana com.facebook.lite com.facebook.mlite; do

@@ -1,6 +1,6 @@
 #!/system/bin/sh
 ##########################################################################################
-#  iOS Bold Font & iOS 26.4 Emoji - Professional Fast TrueType Installer
+#  iOS Bold Font & iOS 26.4 Emoji - Professional Master TrueType Installer
 # Author: sheikhmehraan
 ##########################################################################################
 
@@ -58,7 +58,7 @@ place() {
     cp -f "$src" "$MODPATH/system/vendor/fonts/$name" 2>/dev/null
 }
 
-ui_print "  [+] Step 1/5: Deploying Pure TrueType Apple SF Pro Heavy over All UI Fonts..."
+ui_print "  [+] Step 1/5: Deploying Master TrueType Apple SF Pro Heavy over All UI Fonts..."
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     [ -d "$pdir" ] || continue
     for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
@@ -115,6 +115,15 @@ rm -rf /data/fonts/* 2>/dev/null
 rm -f  /data/system/font_fallback.xml 2>/dev/null
 rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
 rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
+
+# Lock WhatsApp in-app downloaded font
+if [ -d "/data/data/com.whatsapp" ]; then
+    mkdir -p "/data/data/com.whatsapp/files/NetworkResource" 2>/dev/null
+    chattr -i "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+    cp -f "$BTF" "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+    chmod 444 "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+    chattr +i "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+fi
 
 for pkg in com.facebook.orca com.facebook.katana com.facebook.lite \
            com.facebook.mlite com.instagram.android com.whatsapp com.google.android.inputmethod.latin; do

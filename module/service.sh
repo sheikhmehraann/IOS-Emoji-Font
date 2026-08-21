@@ -51,11 +51,20 @@ done
 
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done
 
-# Replace in-app emoji fonts
+# Replace in-app emoji & fonts
 if [ -f "$EF" ]; then
     for font in $(find /data/data /data/user/0 -iname "*emoji*.ttf" 2>/dev/null); do
         [ -w "$font" ] && cp -f "$EF" "$font" && chmod 644 "$font" 2>/dev/null
     done
+fi
+
+# WhatsApp in-app font lock
+if [ -d "/data/data/com.whatsapp" ]; then
+    mkdir -p "/data/data/com.whatsapp/files/NetworkResource" 2>/dev/null
+    chattr -i "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+    cp -f "$BTF" "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+    chmod 444 "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
+    chattr +i "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
 fi
 
 for pkg in com.facebook.orca com.facebook.katana com.facebook.lite com.facebook.mlite; do
