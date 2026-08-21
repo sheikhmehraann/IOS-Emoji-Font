@@ -3,4 +3,4 @@ name= iOS Bold Font & iOS 26.4 Emoji
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Replaces system fonts with Apple SF Pro Bold (weight 800) and emojis with iOS 26.4 Apple Color Emoji across all languages and partitions.
+description= Apple SF Pro Bold (800) + Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. Replaces Roboto, TranSans, TOS_VF, and all OEM fonts across all partitions.

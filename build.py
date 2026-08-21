@@ -12,11 +12,6 @@ OUTPUT_ZIP = os.path.join(DIST_DIR, "iOS_Bold_Font_Emoji_v2.0_Ultra.zip")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 APPLE_FONTS_DIR = os.path.join(ASSETS_DIR, "apple_fonts")
 
-# Apple's "Bold" .otf files are actually weight 600 (Semibold).
-# Real visible bold on iOS "Bold Text" mode = weight 800.
-# We use 800 for variable axes and SF-Pro-Display-Heavy.otf (800) as the static font.
-BOLD_WEIGHT = 800.0
-
 
 def clean_module_dir():
     if os.path.exists(MODULE_DIR):
@@ -40,7 +35,7 @@ def write_lf(filepath, content):
         f.write(content.replace("\r\n", "\n").encode("utf-8"))
 
 
-def patch_variable_font(in_path, out_path, weight=BOLD_WEIGHT):
+def patch_variable_font(in_path, out_path, weight):
     with open(in_path, "rb") as f:
         data = bytearray(f.read())
 
@@ -61,7 +56,9 @@ def patch_variable_font(in_path, out_path, weight=BOLD_WEIGHT):
         for a in range(n_axes):
             pos = axes_off + a * ax_size
             if data[pos:pos + 4] == b"wght":
-                fv = int(weight * 65536)
+                max_val = struct.unpack(">i", data[pos + 12:pos + 16])[0] / 65536
+                actual_weight = min(weight, max_val)
+                fv = int(actual_weight * 65536)
                 struct.pack_into(">i", data, pos + 4, fv)   # minValue
                 struct.pack_into(">i", data, pos + 8, fv)   # defaultValue
 
@@ -114,13 +111,30 @@ def copy_assets():
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro.ttf"),
         os.path.join(sysfonts, "SF-Pro-Variable.ttf"),
+        800.0,
     )
 
-    # SF Pro Display Heavy (static, weight 800 — the REAL bold, not the 600 "Bold")
+    # SF Pro Display Heavy (static, real weight 800)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro-Display-Heavy.otf"),
         os.path.join(sysfonts, "SF-Pro-Bold.otf"),
     )
+    # Set bold bits on the Heavy font
+    with open(os.path.join(sysfonts, "SF-Pro-Bold.otf"), "rb") as f:
+        d = bytearray(f.read())
+    nt = struct.unpack(">H", d[4:6])[0]
+    for i in range(nt):
+        r = 12 + i * 16
+        tag = d[r:r+4].decode("latin-1")
+        off = struct.unpack(">I", d[r+8:r+12])[0]
+        if tag == "OS/2":
+            fs = struct.unpack(">H", d[off+62:off+64])[0]
+            struct.pack_into(">H", d, off+62, fs | 0x0020)
+        elif tag == "head":
+            ms = struct.unpack(">H", d[off+44:off+46])[0]
+            struct.pack_into(">H", d, off+44, ms | 0x0001)
+    with open(os.path.join(sysfonts, "SF-Pro-Bold.otf"), "wb") as f:
+        f.write(d)
 
     # SF Pro Rounded Bold (clocks / lockscreen)
     shutil.copy2(
@@ -128,28 +142,39 @@ def copy_assets():
         os.path.join(sysfonts, "SF-Pro-Rounded.otf"),
     )
 
-    # SF Arabic (Urdu/Arabic/Persian) — wght axis locked to 800
+    # Noto Nastaliq Urdu Bold (the famous Urdu calligraphic font, weight locked to 700 = its max)
+    patch_variable_font(
+        os.path.join(APPLE_FONTS_DIR, "NotoNastaliqUrdu-VF.ttf"),
+        os.path.join(sysfonts, "NotoNastaliqUrdu-Bold.ttf"),
+        700.0,
+    )
+
+    # SF Arabic Bold (for Arabic, Persian, Pashto — NOT Urdu which uses Nastaliq)
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Arabic.ttf"),
         os.path.join(sysfonts, "SF-Arabic.ttf"),
+        800.0,
     )
 
-    # SF Hebrew — wght axis locked to 800
+    # SF Hebrew Bold
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Hebrew.ttf"),
         os.path.join(sysfonts, "SF-Hebrew.ttf"),
+        800.0,
     )
 
-    # SF Armenian — wght axis locked to 800
+    # SF Armenian Bold
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Armenian.ttf"),
         os.path.join(sysfonts, "SF-Armenian.ttf"),
+        800.0,
     )
 
-    # SF Georgian — wght axis locked to 800
+    # SF Georgian Bold
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Georgian.ttf"),
         os.path.join(sysfonts, "SF-Georgian.ttf"),
+        800.0,
     )
 
 
@@ -160,7 +185,7 @@ name= iOS Bold Font & iOS 26.4 Emoji
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Replaces system fonts with Apple SF Pro Bold (weight 800) and emojis with iOS 26.4 Apple Color Emoji across all languages and partitions.
+description= Apple SF Pro Bold (800) + Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. Replaces Roboto, TranSans, TOS_VF, and all OEM fonts across all partitions.
 """)
 
     write_lf(os.path.join(MODULE_DIR, "customize.sh"), r"""#!/system/bin/sh
@@ -193,6 +218,7 @@ FD="$MODPATH/system/fonts"
 VF="$FD/SF-Pro-Variable.ttf"
 BF="$FD/SF-Pro-Bold.otf"
 RF="$FD/SF-Pro-Rounded.otf"
+UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 AF="$FD/SF-Arabic.ttf"
 HF="$FD/SF-Hebrew.ttf"
 AMF="$FD/SF-Armenian.ttf"
@@ -209,7 +235,7 @@ place() {
 }
 
 # ── Variable fonts (TOS_VF, Roboto VF, GoogleSansFlex, MiSans VF, OPlus VF) ──
-ui_print "  [1/5] Variable fonts..."
+ui_print "  [1/5] Variable fonts (TOS_VF, Roboto VF, GoogleSansFlex)..."
 for f in \
     Roboto-VariableFont_wdth,wght.ttf  Roboto-Italic-VariableFont_wdth,wght.ttf \
     RobotoFlex-Regular.ttf \
@@ -220,8 +246,8 @@ for f in \
 do place "$VF" "$f"; done
 ui_print "      ✔ Done"
 
-# ── Static UI fonts (Roboto, TranSans, Google Sans, Samsung, Xiaomi, OnePlus, etc.) ──
-ui_print "  [2/5] Static UI fonts..."
+# ── Static UI fonts (Roboto, TranSans, Google Sans, Samsung, Xiaomi, OnePlus) ──
+ui_print "  [2/5] Static UI fonts (Roboto, TranSans, Google Sans, Samsung, etc.)..."
 for f in \
     Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-MediumItalic.ttf \
     Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf \
@@ -261,13 +287,17 @@ for f in \
 do place "$BF" "$f"; done
 ui_print "      ✔ Done"
 
-# ── Multilingual script fonts ──
-ui_print "  [3/5] Multilingual scripts (Urdu, Arabic, Hebrew, Armenian, Georgian)..."
+# ── Multilingual scripts ──
+ui_print "  [3/5] Multilingual (Urdu Nastaliq Bold, Arabic, Hebrew, Armenian, Georgian)..."
 
-# Arabic / Urdu / Persian — on iOS these ALL use SF Arabic (Naskh style, not Nastaliq)
+# Urdu — Noto Nastaliq Urdu Bold (the famous calligraphic Nastaliq font)
 for f in \
-    NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf \
-    NotoNastaliqUrdu.ttf \
+    NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
+    NotoNastaliqUrdu-VF.ttf
+do place "$UF" "$f"; done
+
+# Arabic / Persian / Pashto — SF Arabic Bold (Naskh sans-serif style)
+for f in \
     NotoSansArabic-Regular.ttf NotoSansArabic-Bold.ttf NotoSansArabic-Medium.ttf \
     NotoSansArabicUI-Regular.ttf NotoSansArabicUI-Bold.ttf NotoSansArabicUI-Medium.ttf \
     NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
@@ -275,15 +305,19 @@ for f in \
     NotoKufiArabic-Regular.ttf NotoKufiArabic-Bold.ttf
 do place "$AF" "$f"; done
 
+# Hebrew
 for f in NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf NotoSansHebrew-Medium.ttf
 do place "$HF" "$f"; done
 
+# Armenian
 for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf NotoSansArmenian-Medium.ttf
 do place "$AMF" "$f"; done
 
+# Georgian
 for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf NotoSansGeorgian-Medium.ttf
 do place "$GF" "$f"; done
 
+# Clocks
 for f in AndroidClock.ttf GoogleSansClock-Regular.ttf
 do place "$RF" "$f"; done
 ui_print "      ✔ Done"
@@ -300,8 +334,10 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
         case "$fname" in
             *Emoji*|*emoji*|*Symbol*|*symbol*|*Math*|*math*|*Mono*) continue ;;
             *Clock*|*clock*)                     place "$RF"  "$fname" ;;
-            *Arabic*|*arabic*|*Urdu*|*urdu*|*Nastaliq*|*nastaliq*|*Naskh*|*naskh*|*Kufi*|*kufi*)
+            *Nastaliq*|*nastaliq*)                place "$UF"  "$fname" ;;
+            *Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
                                                   place "$AF"  "$fname" ;;
+            *Urdu*|*urdu*)                        place "$UF"  "$fname" ;;
             *Hebrew*|*hebrew*)                    place "$HF"  "$fname" ;;
             *Armenian*|*armenian*)                place "$AMF" "$fname" ;;
             *Georgian*|*georgian*)                place "$GF"  "$fname" ;;
@@ -363,8 +399,8 @@ ui_print " "
 # iOS Bold Font & iOS 26.4 Emoji — Early Boot (post-fs-data)
 # Author: sheikhmehraan
 #
-# Bind-mounts Apple fonts over EVERY system font file as a nuclear fallback
-# for OverlayFS edge cases, dynamic partitions, and A/B slots.
+# Nuclear fallback: bind-mounts Apple fonts over EVERY system font.
+# Specifically targets Transsion OS (TOS_VF, TranSans) in /product/fonts.
 ##########################################################################################
 
 MODPATH=${0%/*}
@@ -372,6 +408,7 @@ FD="$MODPATH/system/fonts"
 VF="$FD/SF-Pro-Variable.ttf"
 BF="$FD/SF-Pro-Bold.otf"
 RF="$FD/SF-Pro-Rounded.otf"
+UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 AF="$FD/SF-Arabic.ttf"
 HF="$FD/SF-Hebrew.ttf"
 AMF="$FD/SF-Armenian.ttf"
@@ -395,7 +432,11 @@ for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
                 [ -f "$EF" ] && mount -o bind "$EF" "$fpath" 2>/dev/null ;;
             *Clock*|*clock*)
                 [ -f "$RF" ] && mount -o bind "$RF" "$fpath" 2>/dev/null ;;
-            *Arabic*|*arabic*|*Urdu*|*urdu*|*Nastaliq*|*nastaliq*|*Naskh*|*naskh*|*Kufi*|*kufi*)
+            *Nastaliq*|*nastaliq*)
+                [ -f "$UF" ] && mount -o bind "$UF" "$fpath" 2>/dev/null ;;
+            *Urdu*|*urdu*)
+                [ -f "$UF" ] && mount -o bind "$UF" "$fpath" 2>/dev/null ;;
+            *Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
                 [ -f "$AF" ] && mount -o bind "$AF" "$fpath" 2>/dev/null ;;
             *Hebrew*|*hebrew*)
                 [ -f "$HF" ] && mount -o bind "$HF" "$fpath" 2>/dev/null ;;
@@ -405,6 +446,10 @@ for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
                 [ -f "$GF" ] && mount -o bind "$GF" "$fpath" 2>/dev/null ;;
             TOS_VF*|*Variable*|*VF*|*Flex*)
                 [ -f "$VF" ] && mount -o bind "$VF" "$fpath" 2>/dev/null ;;
+            TranSans*|TransSans*|InfinixSans*|TecnoSans*)
+                [ -f "$BF" ] && mount -o bind "$BF" "$fpath" 2>/dev/null ;;
+            Roboto*|GoogleSans*|MiSans*|Samsung*|OPlus*|DroidSans*|NotoSans-*|NotoSerif-*)
+                [ -f "$BF" ] && mount -o bind "$BF" "$fpath" 2>/dev/null ;;
             *Devanagari*|*Bengali*|*Tamil*|*Telugu*|*Kannada*|*Malayalam*|*Gurmukhi*|*Gujarati*|*Oriya*|*Sinhala*|*Myanmar*|*Khmer*|*Lao*|*Thai*|*Tibetan*|*Ethiopic*|*Cherokee*|*Canadian*|*CJK*|*HanSans*)
                 case "$fname" in
                     *Regular*|*Light*|*Thin*|*Medium*)
@@ -421,11 +466,6 @@ done
 """)
 
     write_lf(os.path.join(MODULE_DIR, "service.sh"), r"""#!/system/bin/sh
-##########################################################################################
-# iOS Bold Font & iOS 26.4 Emoji — Late Service
-# Author: sheikhmehraan
-##########################################################################################
-
 MODPATH=${0%/*}
 
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 5; done

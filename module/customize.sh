@@ -28,6 +28,7 @@ FD="$MODPATH/system/fonts"
 VF="$FD/SF-Pro-Variable.ttf"
 BF="$FD/SF-Pro-Bold.otf"
 RF="$FD/SF-Pro-Rounded.otf"
+UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 AF="$FD/SF-Arabic.ttf"
 HF="$FD/SF-Hebrew.ttf"
 AMF="$FD/SF-Armenian.ttf"
@@ -44,7 +45,7 @@ place() {
 }
 
 # ── Variable fonts (TOS_VF, Roboto VF, GoogleSansFlex, MiSans VF, OPlus VF) ──
-ui_print "  [1/5] Variable fonts..."
+ui_print "  [1/5] Variable fonts (TOS_VF, Roboto VF, GoogleSansFlex)..."
 for f in \
     Roboto-VariableFont_wdth,wght.ttf  Roboto-Italic-VariableFont_wdth,wght.ttf \
     RobotoFlex-Regular.ttf \
@@ -55,8 +56,8 @@ for f in \
 do place "$VF" "$f"; done
 ui_print "      ✔ Done"
 
-# ── Static UI fonts (Roboto, TranSans, Google Sans, Samsung, Xiaomi, OnePlus, etc.) ──
-ui_print "  [2/5] Static UI fonts..."
+# ── Static UI fonts (Roboto, TranSans, Google Sans, Samsung, Xiaomi, OnePlus) ──
+ui_print "  [2/5] Static UI fonts (Roboto, TranSans, Google Sans, Samsung, etc.)..."
 for f in \
     Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-MediumItalic.ttf \
     Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf \
@@ -96,13 +97,17 @@ for f in \
 do place "$BF" "$f"; done
 ui_print "      ✔ Done"
 
-# ── Multilingual script fonts ──
-ui_print "  [3/5] Multilingual scripts (Urdu, Arabic, Hebrew, Armenian, Georgian)..."
+# ── Multilingual scripts ──
+ui_print "  [3/5] Multilingual (Urdu Nastaliq Bold, Arabic, Hebrew, Armenian, Georgian)..."
 
-# Arabic / Urdu / Persian — on iOS these ALL use SF Arabic (Naskh style, not Nastaliq)
+# Urdu — Noto Nastaliq Urdu Bold (the famous calligraphic Nastaliq font)
 for f in \
-    NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf \
-    NotoNastaliqUrdu.ttf \
+    NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
+    NotoNastaliqUrdu-VF.ttf
+do place "$UF" "$f"; done
+
+# Arabic / Persian / Pashto — SF Arabic Bold (Naskh sans-serif style)
+for f in \
     NotoSansArabic-Regular.ttf NotoSansArabic-Bold.ttf NotoSansArabic-Medium.ttf \
     NotoSansArabicUI-Regular.ttf NotoSansArabicUI-Bold.ttf NotoSansArabicUI-Medium.ttf \
     NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
@@ -110,15 +115,19 @@ for f in \
     NotoKufiArabic-Regular.ttf NotoKufiArabic-Bold.ttf
 do place "$AF" "$f"; done
 
+# Hebrew
 for f in NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf NotoSansHebrew-Medium.ttf
 do place "$HF" "$f"; done
 
+# Armenian
 for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf NotoSansArmenian-Medium.ttf
 do place "$AMF" "$f"; done
 
+# Georgian
 for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf NotoSansGeorgian-Medium.ttf
 do place "$GF" "$f"; done
 
+# Clocks
 for f in AndroidClock.ttf GoogleSansClock-Regular.ttf
 do place "$RF" "$f"; done
 ui_print "      ✔ Done"
@@ -135,8 +144,10 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
         case "$fname" in
             *Emoji*|*emoji*|*Symbol*|*symbol*|*Math*|*math*|*Mono*) continue ;;
             *Clock*|*clock*)                     place "$RF"  "$fname" ;;
-            *Arabic*|*arabic*|*Urdu*|*urdu*|*Nastaliq*|*nastaliq*|*Naskh*|*naskh*|*Kufi*|*kufi*)
+            *Nastaliq*|*nastaliq*)                place "$UF"  "$fname" ;;
+            *Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
                                                   place "$AF"  "$fname" ;;
+            *Urdu*|*urdu*)                        place "$UF"  "$fname" ;;
             *Hebrew*|*hebrew*)                    place "$HF"  "$fname" ;;
             *Armenian*|*armenian*)                place "$AMF" "$fname" ;;
             *Georgian*|*georgian*)                place "$GF"  "$fname" ;;

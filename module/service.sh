@@ -1,9 +1,4 @@
 #!/system/bin/sh
-##########################################################################################
-# iOS Bold Font & iOS 26.4 Emoji — Late Service
-# Author: sheikhmehraan
-##########################################################################################
-
 MODPATH=${0%/*}
 
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 5; done
