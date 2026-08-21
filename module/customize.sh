@@ -36,8 +36,7 @@ fi
 
 FD="$MODPATH/system/fonts"
 BTF="$FD/SF-Pro-Bold.ttf"
-BOF="$FD/SF-Pro-Bold.otf"
-VF="$FD/SF-Pro-Variable.ttf"
+NYF="$FD/NewYork-Bold.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 AF="$FD/SF-Arabic.ttf"
@@ -59,21 +58,7 @@ place() {
     cp -f "$src" "$MODPATH/system/vendor/fonts/$name" 2>/dev/null
 }
 
-ui_print "  [+] Step 1/5: Deploying Apple SF Pro Variable Fonts..."
-for f in \
-    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf TOS_250829VF.ttf \
-    Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf \
-    RobotoFlex-Regular.ttf \
-    GoogleSansFlex-Regular.ttf \
-    MiSansVF.ttf MiSans_VF.ttf \
-    OPlusSans2.0-VF.ttf OPlusSans3.0-VF.ttf
-do
-    place "$VF" "$f"
-done
-ui_print "      ✔ Variable fonts deployed"
-ui_print " "
-
-ui_print "  [+] Step 2/5: Deploying Apple SF Pro Bold over All UI, Serif & SourceSans fonts..."
+ui_print "  [+] Step 1/5: Deploying Apple SF Pro Text Heavy over All UI Fonts..."
 for f in \
     TranSans.ttf TranSans-Regular.ttf TranSans-Bold.ttf TranSans-Medium.ttf \
     TranSans-Italic.ttf TranSans-BoldItalic.ttf TranSans-Light.ttf TranSans-LightItalic.ttf \
@@ -87,12 +72,12 @@ for f in \
     TransSans_Regular.ttf TransSans_Bold.ttf TransSans_Medium.ttf TransSans_Italic.ttf \
     TransSans_SC.ttf TransSans_TC.ttf TransSans_Thai.ttf TransSans_Myanmar.ttf TransSans_SC_0704.ttf \
     TOS.ttf TOS-Regular.ttf TOS-Bold.ttf \
+    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf TOS_250829VF.ttf \
     InfinixSans.ttf InfinixSans-Regular.ttf InfinixSans-Bold.ttf InfinixSans-Medium.ttf \
     TecnoSans.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf TecnoSans-Medium.ttf \
     ItelSans.ttf ItelSans-Regular.ttf ItelSans-Bold.ttf \
     SourceSansPro-Regular.ttf SourceSansPro-Bold.ttf SourceSansPro-SemiBold.ttf \
     SourceSansPro-Italic.ttf SourceSansPro-BoldItalic.ttf SourceSansPro-SemiBoldItalic.ttf \
-    NotoSerif-Regular.ttf NotoSerif-Bold.ttf NotoSerif-Italic.ttf NotoSerif-BoldItalic.ttf \
     NotoSans-Regular.ttf NotoSans-Bold.ttf NotoSans-Medium.ttf NotoSans-Italic.ttf \
     NotoSans-BoldItalic.ttf NotoSans-Light.ttf NotoSans-Thin.ttf \
     Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-MediumItalic.ttf \
@@ -101,6 +86,8 @@ for f in \
     RobotoStatic-Regular.ttf RobotoStatic-Bold.ttf RobotoStatic-Medium.ttf \
     RobotoStatic-Italic.ttf RobotoStatic-BoldItalic.ttf RobotoStatic-Light.ttf \
     RobotoStatic-Thin.ttf RobotoStatic-Black.ttf \
+    RobotoFlex-Regular.ttf \
+    Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf \
     RobotoCondensed-Regular.ttf RobotoCondensed-Bold.ttf RobotoCondensed-Medium.ttf \
     RobotoCondensed-MediumItalic.ttf RobotoCondensed-Italic.ttf RobotoCondensed-BoldItalic.ttf \
     RobotoCondensed-Light.ttf RobotoCondensed-LightItalic.ttf \
@@ -108,6 +95,7 @@ for f in \
     GoogleSans-Italic.ttf GoogleSans-BoldItalic.ttf GoogleSans-MediumItalic.ttf \
     GoogleSansText-Regular.ttf GoogleSansText-Medium.ttf GoogleSansText-Bold.ttf \
     GoogleSansText-Italic.ttf GoogleSansText-BoldItalic.ttf GoogleSansText-MediumItalic.ttf \
+    GoogleSansFlex-Regular.ttf \
     GS-Regular.ttf GS-Medium.ttf GS-Bold.ttf GS-Italic.ttf \
     SECRobotoLight-Regular.ttf SECRobotoLight-Bold.ttf SECRoboto-Regular.ttf SECRoboto-Bold.ttf \
     SamsungOne-400.ttf SamsungOne-500.ttf SamsungOne-600.ttf SamsungOne-700.ttf \
@@ -115,19 +103,27 @@ for f in \
     MiSans-Regular.ttf MiSans-Medium.ttf MiSans-Demibold.ttf MiSans-Bold.ttf \
     MiSans-Heavy.ttf MiSans-Light.ttf MiSans-Thin.ttf MiSans-Normal.ttf \
     MiSans-Semibold.ttf MiSansLatin-Regular.ttf MiSansLatin-Bold.ttf \
+    MiSansVF.ttf MiSans_VF.ttf \
     Miui-Regular.ttf Miui-Bold.ttf \
     OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.ttf \
+    OPlusSans2.0-VF.ttf OPlusSans3.0-VF.ttf \
     SysSans-En-Regular.ttf OnePlusSans-Regular.ttf OnePlusSans-Bold.ttf \
     DroidSans.ttf DroidSans-Bold.ttf DroidSansMono.ttf \
     CutiveMono.ttf ComingSoon.ttf DancingScript-Regular.ttf DancingScript-Bold.ttf \
     CarroisGothicSC-Regular.ttf Zawgyi-One.ttf myanmar_shadow.ttf
 do
-    case "$f" in
-        *.otf) place "$BOF" "$f" ;;
-        *)     place "$BTF" "$f" ;;
-    esac
+    place "$BTF" "$f"
 done
-ui_print "      ✔ All UI, Serif, and SourceSans fonts deployed"
+ui_print "      ✔ All UI, Roboto, and TranSans fonts deployed"
+ui_print " "
+
+ui_print "  [+] Step 2/5: Deploying Apple New York Serif over NotoSerif..."
+for f in \
+    NotoSerif-Regular.ttf NotoSerif-Bold.ttf NotoSerif-Italic.ttf NotoSerif-BoldItalic.ttf
+do
+    place "$NYF" "$f"
+done
+ui_print "      ✔ Apple New York Serif fonts deployed"
 ui_print " "
 
 ui_print "  [+] Step 3/5: Deploying Noto Nastaliq Urdu Bold & Multilingual Fonts..."
@@ -173,10 +169,7 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
             *Hebrew*|*hebrew*)                    place "$HF"  "$fname" ;;
             *Armenian*|*armenian*)                place "$AMF" "$fname" ;;
             *Georgian*|*georgian*)                place "$GF"  "$fname" ;;
-            TOS_VF*|*Variable*|*VF*|*Flex*)       place "$VF"  "$fname" ;;
-            TranSans*|TransSans*|Infinix*|Tecno*|Itel*|SourceSans*|NotoSerif*|NotoSans*)
-                                                  place "$BTF" "$fname" ;;
-            *.otf)                                place "$BOF" "$fname" ;;
+            *Serif*|*serif*)                      place "$NYF" "$fname" ;;
             *)                                    place "$BTF" "$fname" ;;
         esac
         SCAN_COUNT=$((SCAN_COUNT + 1))

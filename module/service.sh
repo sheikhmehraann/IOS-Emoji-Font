@@ -7,8 +7,7 @@
 MODPATH=${0%/*}
 FD="$MODPATH/system/fonts"
 BTF="$FD/SF-Pro-Bold.ttf"
-BOF="$FD/SF-Pro-Bold.otf"
-VF="$FD/SF-Pro-Variable.ttf"
+NYF="$FD/NewYork-Bold.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 AF="$FD/SF-Arabic.ttf"
@@ -21,13 +20,12 @@ EF="$FD/NotoColorEmoji.ttf"
 mount -o bind "$EF" /system/fonts/NotoColorEmoji.ttf 2>/dev/null
 mount -o bind "$EF" /system/fonts/NotoColorEmojiFlags.ttf 2>/dev/null
 
-# 2. All Roboto, UI, SourceSans, NotoSerif, NotoSans bindings
+# 2. All Roboto, UI, SourceSans, NotoSans bindings
 for f in /system/fonts/Roboto*.ttf \
          /system/fonts/DroidSans*.ttf \
          /system/fonts/GoogleSans*.ttf \
          /system/fonts/SECRoboto*.ttf \
          /system/fonts/SourceSansPro*.ttf \
-         /system/fonts/NotoSerif-*.ttf \
          /system/fonts/NotoSans-*.ttf \
          /system/fonts/CarroisGothic*.ttf \
          /system/fonts/CutiveMono*.ttf \
@@ -36,18 +34,23 @@ for f in /system/fonts/Roboto*.ttf \
     [ -f "$f" ] && mount -o bind "$BTF" "$f" 2>/dev/null
 done
 
-# 3. All Transsion product partition fonts
+# 3. All NotoSerif bindings
+for f in /system/fonts/NotoSerif-*.ttf; do
+    [ -f "$f" ] && mount -o bind "$NYF" "$f" 2>/dev/null
+done
+
+# 4. All Transsion product partition fonts
 for f in /product/fonts/*; do
     [ -f "$f" ] || continue
     mount -o bind "$BTF" "$f" 2>/dev/null
 done
 
-# 4. Urdu Nastaliq Bold (on all Arabic/Urdu fallback targets)
+# 5. Urdu Nastaliq Bold (on all Arabic/Urdu fallback targets)
 for f in /system/fonts/NotoNaskhArabic*.ttf /system/fonts/NotoSansArabic*.ttf /system/fonts/NotoNastaliqUrdu*.ttf; do
     [ -f "$f" ] && mount -o bind "$UF" "$f" 2>/dev/null
 done
 
-# 5. Multilingual scripts
+# 6. Multilingual scripts
 for f in /system/fonts/NotoSansHebrew*.ttf; do [ -f "$f" ] && mount -o bind "$HF" "$f" 2>/dev/null; done
 for f in /system/fonts/NotoSansArmenian*.ttf; do [ -f "$f" ] && mount -o bind "$AMF" "$f" 2>/dev/null; done
 for f in /system/fonts/NotoSansGeorgian*.ttf; do [ -f "$f" ] && mount -o bind "$GF" "$f" 2>/dev/null; done

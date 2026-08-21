@@ -2,7 +2,6 @@ import os
 import shutil
 import zipfile
 import hashlib
-import struct
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODULE_DIR = os.path.join(BASE_DIR, "module")
@@ -31,63 +30,6 @@ def write_lf(filepath, content):
     with open(filepath, "wb") as f:
         f.write(content.replace("\r\n", "\n").encode("utf-8"))
 
-def patch_variable_font(in_path, out_path, weight=800.0):
-    with open(in_path, "rb") as f:
-        data = bytearray(f.read())
-
-    num_tables = struct.unpack(">H", data[4:6])[0]
-    tables = {}
-    for i in range(num_tables):
-        r = 12 + i * 16
-        tag = data[r:r + 4].decode("latin-1")
-        offset = struct.unpack(">I", data[r + 8:r + 12])[0]
-        length = struct.unpack(">I", data[r + 12:r + 16])[0]
-        tables[tag] = (offset, length, r)
-
-    if "fvar" in tables:
-        off = tables["fvar"][0]
-        axes_off = off + struct.unpack(">H", data[off + 4:off + 6])[0]
-        n_axes = struct.unpack(">H", data[off + 8:off + 10])[0]
-        ax_size = struct.unpack(">H", data[off + 10:off + 12])[0]
-        for a in range(n_axes):
-            pos = axes_off + a * ax_size
-            if data[pos:pos + 4] == b"wght":
-                max_val = struct.unpack(">i", data[pos + 12:pos + 16])[0] / 65536
-                actual_weight = min(weight, max_val)
-                fv = int(actual_weight * 65536)
-                struct.pack_into(">i", data, pos + 4, fv)   # minValue
-                struct.pack_into(">i", data, pos + 8, fv)   # defaultValue
-
-    if "OS/2" in tables:
-        off = tables["OS/2"][0]
-        struct.pack_into(">H", data, off + 4, int(min(weight, 800)))
-        fs = struct.unpack(">H", data[off + 62:off + 64])[0]
-        struct.pack_into(">H", data, off + 62, fs | 0x0020)
-
-    if "head" in tables:
-        off = tables["head"][0]
-        ms = struct.unpack(">H", data[off + 44:off + 46])[0]
-        struct.pack_into(">H", data, off + 44, ms | 0x0001)
-
-    for tag, (off, length, rec_off) in tables.items():
-        pl = (length + 3) & ~3
-        tb = data[off:off + length] + b"\x00" * (pl - length)
-        if tag == "head":
-            struct.pack_into(">I", data, off + 8, 0)
-            tb = data[off:off + length] + b"\x00" * (pl - length)
-        cs = sum(struct.unpack(f">{pl // 4}I", tb)) & 0xFFFFFFFF
-        struct.pack_into(">I", data, rec_off + 4, cs)
-
-    if "head" in tables:
-        ho = tables["head"][0]
-        pt = (len(data) + 3) & ~3
-        fb = data + b"\x00" * (pt - len(data))
-        tc = sum(struct.unpack(f">{pt // 4}I", fb)) & 0xFFFFFFFF
-        struct.pack_into(">I", data, ho + 8, (0xB1B0AFBA - tc) & 0xFFFFFFFF)
-
-    with open(out_path, "wb") as f:
-        f.write(data)
-
 def copy_assets():
     src = os.path.join(ASSETS_DIR, "META-INF", "com", "google", "android")
     dst = os.path.join(MODULE_DIR, "META-INF", "com", "google", "android")
@@ -102,18 +44,18 @@ def copy_assets():
         os.path.join(sysfonts, "NotoColorEmoji.ttf"),
     )
 
-    # SF Pro Bold (TrueType Variable & Static Bold 800)
-    patch_variable_font(
-        os.path.join(APPLE_FONTS_DIR, "SF-Pro.ttf"),
+    # SF Pro Text Heavy (Static 800 Bold for UI & Text)
+    shutil.copy2(
+        os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Heavy.otf"),
         os.path.join(sysfonts, "SF-Pro-Bold.ttf"),
-        800.0,
     )
     shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Variable.ttf"))
+    shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Bold.otf"))
 
-    # SF Pro Display Heavy (static OTF)
+    # Apple New York Large Heavy (Static Serif for NotoSerif)
     shutil.copy2(
-        os.path.join(APPLE_FONTS_DIR, "SF-Pro-Display-Heavy.otf"),
-        os.path.join(sysfonts, "SF-Pro-Bold.otf"),
+        os.path.join(APPLE_FONTS_DIR, "NewYorkLarge-Heavy.otf"),
+        os.path.join(sysfonts, "NewYork-Bold.ttf"),
     )
 
     # SF Pro Rounded Bold (clocks / lockscreen)
@@ -123,38 +65,33 @@ def copy_assets():
     )
 
     # Noto Nastaliq Urdu Bold (Urdu Nastaliq Calligraphy)
-    patch_variable_font(
-        os.path.join(APPLE_FONTS_DIR, "NotoNastaliqUrdu-VF.ttf"),
+    shutil.copy2(
+        os.path.join(APPLE_FONTS_DIR, "NotoNastaliqUrdu-Bold.ttf"),
         os.path.join(sysfonts, "NotoNastaliqUrdu-Bold.ttf"),
-        700.0,
     )
 
-    # SF Arabic Bold (Arabic, Persian, Pashto)
-    patch_variable_font(
-        os.path.join(APPLE_FONTS_DIR, "SF-Arabic.ttf"),
+    # SF Arabic Bold
+    shutil.copy2(
+        os.path.join(APPLE_FONTS_DIR, "SF-Arabic-Bold.ttf"),
         os.path.join(sysfonts, "SF-Arabic.ttf"),
-        800.0,
     )
 
     # SF Hebrew Bold
-    patch_variable_font(
-        os.path.join(APPLE_FONTS_DIR, "SF-Hebrew.ttf"),
+    shutil.copy2(
+        os.path.join(APPLE_FONTS_DIR, "SF-Hebrew-Bold.ttf"),
         os.path.join(sysfonts, "SF-Hebrew.ttf"),
-        800.0,
     )
 
     # SF Armenian Bold
-    patch_variable_font(
-        os.path.join(APPLE_FONTS_DIR, "SF-Armenian.ttf"),
+    shutil.copy2(
+        os.path.join(APPLE_FONTS_DIR, "SF-Armenian-Bold.ttf"),
         os.path.join(sysfonts, "SF-Armenian.ttf"),
-        800.0,
     )
 
     # SF Georgian Bold
-    patch_variable_font(
-        os.path.join(APPLE_FONTS_DIR, "SF-Georgian.ttf"),
+    shutil.copy2(
+        os.path.join(APPLE_FONTS_DIR, "SF-Georgian-Bold.ttf"),
         os.path.join(sysfonts, "SF-Georgian.ttf"),
-        800.0,
     )
 
 def write_module_scripts():
@@ -164,7 +101,7 @@ name= iOS Bold Font & iOS 26.4 Emoji
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Apple SF Pro Bold (800) + Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. 100% universal replacement for TranSans, SourceSans, NotoSerif, Roboto, and all UI fonts across every app.
+description= Apple SF Pro Text Heavy (800) + Apple New York Serif + Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. 100% true static bold coverage for TranSans, Roboto, and all UI elements.
 """)
 
     write_lf(os.path.join(MODULE_DIR, "customize.sh"), r"""#!/system/bin/sh
@@ -205,8 +142,7 @@ fi
 
 FD="$MODPATH/system/fonts"
 BTF="$FD/SF-Pro-Bold.ttf"
-BOF="$FD/SF-Pro-Bold.otf"
-VF="$FD/SF-Pro-Variable.ttf"
+NYF="$FD/NewYork-Bold.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 AF="$FD/SF-Arabic.ttf"
@@ -228,21 +164,7 @@ place() {
     cp -f "$src" "$MODPATH/system/vendor/fonts/$name" 2>/dev/null
 }
 
-ui_print "  [+] Step 1/5: Deploying Apple SF Pro Variable Fonts..."
-for f in \
-    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf TOS_250829VF.ttf \
-    Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf \
-    RobotoFlex-Regular.ttf \
-    GoogleSansFlex-Regular.ttf \
-    MiSansVF.ttf MiSans_VF.ttf \
-    OPlusSans2.0-VF.ttf OPlusSans3.0-VF.ttf
-do
-    place "$VF" "$f"
-done
-ui_print "      ✔ Variable fonts deployed"
-ui_print " "
-
-ui_print "  [+] Step 2/5: Deploying Apple SF Pro Bold over All UI, Serif & SourceSans fonts..."
+ui_print "  [+] Step 1/5: Deploying Apple SF Pro Text Heavy over All UI Fonts..."
 for f in \
     TranSans.ttf TranSans-Regular.ttf TranSans-Bold.ttf TranSans-Medium.ttf \
     TranSans-Italic.ttf TranSans-BoldItalic.ttf TranSans-Light.ttf TranSans-LightItalic.ttf \
@@ -256,12 +178,12 @@ for f in \
     TransSans_Regular.ttf TransSans_Bold.ttf TransSans_Medium.ttf TransSans_Italic.ttf \
     TransSans_SC.ttf TransSans_TC.ttf TransSans_Thai.ttf TransSans_Myanmar.ttf TransSans_SC_0704.ttf \
     TOS.ttf TOS-Regular.ttf TOS-Bold.ttf \
+    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf TOS_250829VF.ttf \
     InfinixSans.ttf InfinixSans-Regular.ttf InfinixSans-Bold.ttf InfinixSans-Medium.ttf \
     TecnoSans.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf TecnoSans-Medium.ttf \
     ItelSans.ttf ItelSans-Regular.ttf ItelSans-Bold.ttf \
     SourceSansPro-Regular.ttf SourceSansPro-Bold.ttf SourceSansPro-SemiBold.ttf \
     SourceSansPro-Italic.ttf SourceSansPro-BoldItalic.ttf SourceSansPro-SemiBoldItalic.ttf \
-    NotoSerif-Regular.ttf NotoSerif-Bold.ttf NotoSerif-Italic.ttf NotoSerif-BoldItalic.ttf \
     NotoSans-Regular.ttf NotoSans-Bold.ttf NotoSans-Medium.ttf NotoSans-Italic.ttf \
     NotoSans-BoldItalic.ttf NotoSans-Light.ttf NotoSans-Thin.ttf \
     Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-MediumItalic.ttf \
@@ -270,6 +192,8 @@ for f in \
     RobotoStatic-Regular.ttf RobotoStatic-Bold.ttf RobotoStatic-Medium.ttf \
     RobotoStatic-Italic.ttf RobotoStatic-BoldItalic.ttf RobotoStatic-Light.ttf \
     RobotoStatic-Thin.ttf RobotoStatic-Black.ttf \
+    RobotoFlex-Regular.ttf \
+    Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf \
     RobotoCondensed-Regular.ttf RobotoCondensed-Bold.ttf RobotoCondensed-Medium.ttf \
     RobotoCondensed-MediumItalic.ttf RobotoCondensed-Italic.ttf RobotoCondensed-BoldItalic.ttf \
     RobotoCondensed-Light.ttf RobotoCondensed-LightItalic.ttf \
@@ -277,6 +201,7 @@ for f in \
     GoogleSans-Italic.ttf GoogleSans-BoldItalic.ttf GoogleSans-MediumItalic.ttf \
     GoogleSansText-Regular.ttf GoogleSansText-Medium.ttf GoogleSansText-Bold.ttf \
     GoogleSansText-Italic.ttf GoogleSansText-BoldItalic.ttf GoogleSansText-MediumItalic.ttf \
+    GoogleSansFlex-Regular.ttf \
     GS-Regular.ttf GS-Medium.ttf GS-Bold.ttf GS-Italic.ttf \
     SECRobotoLight-Regular.ttf SECRobotoLight-Bold.ttf SECRoboto-Regular.ttf SECRoboto-Bold.ttf \
     SamsungOne-400.ttf SamsungOne-500.ttf SamsungOne-600.ttf SamsungOne-700.ttf \
@@ -284,19 +209,27 @@ for f in \
     MiSans-Regular.ttf MiSans-Medium.ttf MiSans-Demibold.ttf MiSans-Bold.ttf \
     MiSans-Heavy.ttf MiSans-Light.ttf MiSans-Thin.ttf MiSans-Normal.ttf \
     MiSans-Semibold.ttf MiSansLatin-Regular.ttf MiSansLatin-Bold.ttf \
+    MiSansVF.ttf MiSans_VF.ttf \
     Miui-Regular.ttf Miui-Bold.ttf \
     OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.ttf \
+    OPlusSans2.0-VF.ttf OPlusSans3.0-VF.ttf \
     SysSans-En-Regular.ttf OnePlusSans-Regular.ttf OnePlusSans-Bold.ttf \
     DroidSans.ttf DroidSans-Bold.ttf DroidSansMono.ttf \
     CutiveMono.ttf ComingSoon.ttf DancingScript-Regular.ttf DancingScript-Bold.ttf \
     CarroisGothicSC-Regular.ttf Zawgyi-One.ttf myanmar_shadow.ttf
 do
-    case "$f" in
-        *.otf) place "$BOF" "$f" ;;
-        *)     place "$BTF" "$f" ;;
-    esac
+    place "$BTF" "$f"
 done
-ui_print "      ✔ All UI, Serif, and SourceSans fonts deployed"
+ui_print "      ✔ All UI, Roboto, and TranSans fonts deployed"
+ui_print " "
+
+ui_print "  [+] Step 2/5: Deploying Apple New York Serif over NotoSerif..."
+for f in \
+    NotoSerif-Regular.ttf NotoSerif-Bold.ttf NotoSerif-Italic.ttf NotoSerif-BoldItalic.ttf
+do
+    place "$NYF" "$f"
+done
+ui_print "      ✔ Apple New York Serif fonts deployed"
 ui_print " "
 
 ui_print "  [+] Step 3/5: Deploying Noto Nastaliq Urdu Bold & Multilingual Fonts..."
@@ -342,10 +275,7 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
             *Hebrew*|*hebrew*)                    place "$HF"  "$fname" ;;
             *Armenian*|*armenian*)                place "$AMF" "$fname" ;;
             *Georgian*|*georgian*)                place "$GF"  "$fname" ;;
-            TOS_VF*|*Variable*|*VF*|*Flex*)       place "$VF"  "$fname" ;;
-            TranSans*|TransSans*|Infinix*|Tecno*|Itel*|SourceSans*|NotoSerif*|NotoSans*)
-                                                  place "$BTF" "$fname" ;;
-            *.otf)                                place "$BOF" "$fname" ;;
+            *Serif*|*serif*)                      place "$NYF" "$fname" ;;
             *)                                    place "$BTF" "$fname" ;;
         esac
         SCAN_COUNT=$((SCAN_COUNT + 1))
@@ -417,8 +347,7 @@ rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 MODPATH=${0%/*}
 FD="$MODPATH/system/fonts"
 BTF="$FD/SF-Pro-Bold.ttf"
-BOF="$FD/SF-Pro-Bold.otf"
-VF="$FD/SF-Pro-Variable.ttf"
+NYF="$FD/NewYork-Bold.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 AF="$FD/SF-Arabic.ttf"
@@ -431,13 +360,12 @@ EF="$FD/NotoColorEmoji.ttf"
 mount -o bind "$EF" /system/fonts/NotoColorEmoji.ttf 2>/dev/null
 mount -o bind "$EF" /system/fonts/NotoColorEmojiFlags.ttf 2>/dev/null
 
-# 2. All Roboto, UI, SourceSans, NotoSerif, NotoSans bindings
+# 2. All Roboto, UI, SourceSans, NotoSans bindings
 for f in /system/fonts/Roboto*.ttf \
          /system/fonts/DroidSans*.ttf \
          /system/fonts/GoogleSans*.ttf \
          /system/fonts/SECRoboto*.ttf \
          /system/fonts/SourceSansPro*.ttf \
-         /system/fonts/NotoSerif-*.ttf \
          /system/fonts/NotoSans-*.ttf \
          /system/fonts/CarroisGothic*.ttf \
          /system/fonts/CutiveMono*.ttf \
@@ -446,18 +374,23 @@ for f in /system/fonts/Roboto*.ttf \
     [ -f "$f" ] && mount -o bind "$BTF" "$f" 2>/dev/null
 done
 
-# 3. All Transsion product partition fonts
+# 3. All NotoSerif bindings
+for f in /system/fonts/NotoSerif-*.ttf; do
+    [ -f "$f" ] && mount -o bind "$NYF" "$f" 2>/dev/null
+done
+
+# 4. All Transsion product partition fonts
 for f in /product/fonts/*; do
     [ -f "$f" ] || continue
     mount -o bind "$BTF" "$f" 2>/dev/null
 done
 
-# 4. Urdu Nastaliq Bold (on all Arabic/Urdu fallback targets)
+# 5. Urdu Nastaliq Bold (on all Arabic/Urdu fallback targets)
 for f in /system/fonts/NotoNaskhArabic*.ttf /system/fonts/NotoSansArabic*.ttf /system/fonts/NotoNastaliqUrdu*.ttf; do
     [ -f "$f" ] && mount -o bind "$UF" "$f" 2>/dev/null
 done
 
-# 5. Multilingual scripts
+# 6. Multilingual scripts
 for f in /system/fonts/NotoSansHebrew*.ttf; do [ -f "$f" ] && mount -o bind "$HF" "$f" 2>/dev/null; done
 for f in /system/fonts/NotoSansArmenian*.ttf; do [ -f "$f" ] && mount -o bind "$AMF" "$f" 2>/dev/null; done
 for f in /system/fonts/NotoSansGeorgian*.ttf; do [ -f "$f" ] && mount -o bind "$GF" "$f" 2>/dev/null; done
