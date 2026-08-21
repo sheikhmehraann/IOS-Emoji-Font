@@ -1,105 +1,64 @@
 #!/system/bin/sh
 ##########################################################################################
-#
-#  iOS Bold Font & iOS 26.4 Emoji - post-fs-data.sh
+# iOS Bold Font & iOS 26.4 Emoji — Early Boot (post-fs-data)
 # Author: sheikhmehraan
 #
+# Runs before Zygote. Bind-mounts Apple fonts over every system font file
+# that the Magisk overlay might have missed (OverlayFS edge cases, dynamic
+# partitions, A/B slots).
 ##########################################################################################
 
 MODPATH=${0%/*}
-FONT_DIR="$MODPATH/system/fonts"
-VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
-BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
-ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
-ARABIC_FONT="$FONT_DIR/SF-Arabic.ttf"
-HEBREW_FONT="$FONT_DIR/SF-Hebrew.ttf"
-ARMENIAN_FONT="$FONT_DIR/SF-Armenian.ttf"
-GEORGIAN_FONT="$FONT_DIR/SF-Georgian.ttf"
-BASE_EMOJI="$FONT_DIR/NotoColorEmoji.ttf"
+FD="$MODPATH/system/fonts"
+VF="$FD/SF-Pro-Variable.ttf"
+BF="$FD/SF-Pro-Bold.otf"
+RF="$FD/SF-Pro-Rounded.otf"
+AF="$FD/SF-Arabic.ttf"
+HF="$FD/SF-Hebrew.ttf"
+AMF="$FD/SF-Armenian.ttf"
+GF="$FD/SF-Georgian.ttf"
+EF="$FD/NotoColorEmoji.ttf"
 
-# Clean dynamic Android 12-16 FontManager caches before system_server starts
+# Nuke dynamic font caches before system_server starts
 rm -rf /data/fonts/* 2>/dev/null
-rm -rf /data/system/font_fallback.xml 2>/dev/null
-rm -rf /data/fonts/run_metadata.xml 2>/dev/null
+rm -f  /data/system/font_fallback.xml 2>/dev/null
 rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
 rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 
-mkdir -p /data/fonts 2>/dev/null
-chmod 755 /data/fonts 2>/dev/null
-
-# Early-boot Dynamic Bind-Mount across ALL active partitions & fonts (Transsion OS, AOSP, OEM)
-for target_dir in /product/fonts /system_ext/fonts /system/fonts /vendor/fonts /system/product/fonts /system/system_ext/fonts; do
-    if [ -d "$target_dir" ]; then
-        for fpath in "$target_dir"/*.ttf "$target_dir"/*.otf; do
-            [ -f "$fpath" ] || continue
-            fname=$(basename "$fpath")
-            case "$fname" in
-                *Emoji*|*emoji*)
-                    if [ -f "$BASE_EMOJI" ]; then
-                        mount -o bind "$BASE_EMOJI" "$fpath" 2>/dev/null
-                    fi
-                    ;;
-                *Clock*|*clock*)
-                    if [ -f "$ROUND_FONT" ]; then
-                        mount -o bind "$ROUND_FONT" "$fpath" 2>/dev/null
-                    fi
-                    ;;
-                *Arabic*|*arabic*|*Urdu*|*urdu*|*Nastaliq*|*nastaliq*)
-                    if [ -f "$ARABIC_FONT" ]; then
-                        mount -o bind "$ARABIC_FONT" "$fpath" 2>/dev/null
-                    fi
-                    ;;
-                *Hebrew*|*hebrew*)
-                    if [ -f "$HEBREW_FONT" ]; then
-                        mount -o bind "$HEBREW_FONT" "$fpath" 2>/dev/null
-                    fi
-                    ;;
-                *Armenian*|*armenian*)
-                    if [ -f "$ARMENIAN_FONT" ]; then
-                        mount -o bind "$ARMENIAN_FONT" "$fpath" 2>/dev/null
-                    fi
-                    ;;
-                *Georgian*|*georgian*)
-                    if [ -f "$GEORGIAN_FONT" ]; then
-                        mount -o bind "$GEORGIAN_FONT" "$fpath" 2>/dev/null
-                    fi
-                    ;;
-                # Transsion OS (TOS_VF, TranSansShell, TranSans) & Android Variable Fonts
-                TOS_VF*|*Variable*|*VF*|*Flex*)
-                    if [ -f "$VAR_FONT" ]; then
-                        mount -o bind "$VAR_FONT" "$fpath" 2>/dev/null
-                    elif [ -f "$BOLD_FONT" ]; then
-                        mount -o bind "$BOLD_FONT" "$fpath" 2>/dev/null
-                    fi
-                    ;;
-                TranSans*|TransSans*|InfinixSans*|TecnoSans*|Roboto*|GoogleSans*|MiSans*|SamsungOne*|OPlusSans*)
-                    if [ -f "$BOLD_FONT" ]; then
-                        mount -o bind "$BOLD_FONT" "$fpath" 2>/dev/null
-                    fi
-                    ;;
-                *NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansGurmukhi*|*NotoSansGujarati*|*NotoSansOriya*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansTibetan*|*NotoSansEthiopic*|*NotoSansCherokee*|*NotoSansCanadianAboriginal*|*NotoSansCJK*|*NotoSerifCJK*|*SourceHanSans*)
-                    case "$fname" in
-                        *Regular*|*Light*|*Thin*|*Medium*)
-                            bold_candidate=$(echo "$fpath" | sed -e 's/Regular/Bold/g' -e 's/Light/Bold/g' -e 's/Thin/Bold/g' -e 's/Medium/Bold/g')
-                            if [ -f "$bold_candidate" ] && [ "$bold_candidate" != "$fpath" ]; then
-                                mount -o bind "$bold_candidate" "$fpath" 2>/dev/null
-                            fi
-                            ;;
-                    esac
-                    ;;
-                *Symbol*|*symbol*|*Math*|*math*) ;;
-                *)
-                    if [ -f "$MODPATH/product/fonts/$fname" ]; then
-                        mount -o bind "$MODPATH/product/fonts/$fname" "$fpath" 2>/dev/null
-                    elif [ -f "$MODPATH/system_ext/fonts/$fname" ]; then
-                        mount -o bind "$MODPATH/system_ext/fonts/$fname" "$fpath" 2>/dev/null
-                    elif [ -f "$MODPATH/system/fonts/$fname" ]; then
-                        mount -o bind "$MODPATH/system/fonts/$fname" "$fpath" 2>/dev/null
-                    elif [ -f "$BOLD_FONT" ]; then
-                        mount -o bind "$BOLD_FONT" "$fpath" 2>/dev/null
-                    fi
-                    ;;
-            esac
-        done
-    fi
+# Bind-mount over every font in every font directory
+for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
+           /system/product/fonts /system/system_ext/fonts /system/vendor/fonts; do
+    [ -d "$dir" ] || continue
+    for fpath in "$dir"/*.ttf "$dir"/*.otf; do
+        [ -f "$fpath" ] || continue
+        fname=$(basename "$fpath")
+        case "$fname" in
+            *Symbol*|*symbol*|*Math*|*math*|*Mono*|*mono*) continue ;;
+            *Emoji*|*emoji*)
+                [ -f "$EF" ] && mount -o bind "$EF" "$fpath" 2>/dev/null ;;
+            *Clock*|*clock*)
+                [ -f "$RF" ] && mount -o bind "$RF" "$fpath" 2>/dev/null ;;
+            *Arabic*|*arabic*|*Urdu*|*urdu*|*Nastaliq*|*nastaliq*|*Naskh*|*naskh*|*Kufi*|*kufi*)
+                [ -f "$AF" ] && mount -o bind "$AF" "$fpath" 2>/dev/null ;;
+            *Hebrew*|*hebrew*)
+                [ -f "$HF" ] && mount -o bind "$HF" "$fpath" 2>/dev/null ;;
+            *Armenian*|*armenian*)
+                [ -f "$AMF" ] && mount -o bind "$AMF" "$fpath" 2>/dev/null ;;
+            *Georgian*|*georgian*)
+                [ -f "$GF" ] && mount -o bind "$GF" "$fpath" 2>/dev/null ;;
+            TOS_VF*|*Variable*|*VF*|*Flex*)
+                [ -f "$VF" ] && mount -o bind "$VF" "$fpath" 2>/dev/null ;;
+            *Devanagari*|*Bengali*|*Tamil*|*Telugu*|*Kannada*|*Malayalam*|*Gurmukhi*|*Gujarati*|*Oriya*|*Sinhala*|*Myanmar*|*Khmer*|*Lao*|*Thai*|*Tibetan*|*Ethiopic*|*Cherokee*|*Canadian*|*CJK*|*HanSans*)
+                # For Indic/SEA/CJK: bind bold variant over regular/light/thin
+                case "$fname" in
+                    *Regular*|*Light*|*Thin*|*Medium*)
+                        bold=$(echo "$fpath" | sed 's/Regular/Bold/g;s/Light/Bold/g;s/Thin/Bold/g;s/Medium/Bold/g')
+                        [ -f "$bold" ] && [ "$bold" != "$fpath" ] && mount -o bind "$bold" "$fpath" 2>/dev/null
+                        ;;
+                esac
+                ;;
+            *)
+                [ -f "$BF" ] && mount -o bind "$BF" "$fpath" 2>/dev/null ;;
+        esac
+    done
 done

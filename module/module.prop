@@ -1,6 +1,6 @@
 id=ios_bold_font_emoji
-name= iOS Bold Font & iOS 26.4 Emoji
+name= iOS Bold Font & iOS 26.4 Emoji
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Systemlessly replaces UI fonts with clean authentic Apple SF Pro (Bold) across Transsion OS, AOSP, and all languages (Urdu, Arabic, Hebrew, Indic, CJK, Latin) and system emojis with iOS 26.4 Apple Color Emoji.
+description= Replaces system fonts with Apple SF Pro Bold and emojis with iOS 26.4 Apple Color Emoji across all languages and partitions.
