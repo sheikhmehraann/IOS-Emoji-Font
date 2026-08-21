@@ -10,13 +10,14 @@ BTF="$FD/SF-Pro-Bold.ttf"
 NYF="$FD/NewYork-Bold.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
+AF="$FD/SF-Arabic.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
 # 1. System Emoji
 mount -o bind "$EF" /system/fonts/NotoColorEmoji.ttf 2>/dev/null
 mount -o bind "$EF" /system/fonts/NotoColorEmojiFlags.ttf 2>/dev/null
 
-# 2. All Roboto, GoogleSans, SourceSans, DroidSans styles (Regular, Medium, Bold, Light, Thin, Black, Condensed, Variable)
+# 2. All Roboto, GoogleSans, SourceSans, DroidSans styles (Regular, Medium, Bold, Light, Thin, Black, Condensed, Static, Variable, Flex)
 for f in /system/fonts/Roboto*.ttf \
          /system/fonts/GoogleSans*.ttf \
          /system/fonts/SourceSansPro*.ttf \
@@ -30,7 +31,7 @@ for f in /system/fonts/Roboto*.ttf \
     [ -f "$f" ] && mount -o bind "$BTF" "$f" 2>/dev/null
 done
 
-# 3. All Product & Transsion OS UI fonts
+# 3. All Product & Transsion OS UI fonts (TranSans, TOS, TransSans_SC_0704, TOS_250829VF, InfinixSans, TecnoSans)
 for f in /product/fonts/* /system_ext/fonts/* /vendor/fonts/*; do
     [ -f "$f" ] || continue
     fname=$(basename "$f")

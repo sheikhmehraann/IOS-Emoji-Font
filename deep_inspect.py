@@ -1,17 +1,25 @@
 import subprocess
 
 cmd = r"""
-echo "=== 1. ALL FONT FAMILY NAMES IN /system/etc/fonts.xml ==="
-grep -E '<family name=' /system/etc/fonts.xml
+echo "=== TRANSSION SYSTEM PROPERTIES ==="
+getprop | grep -iE 'font|theme|transsion|tos'
 
-echo "=== 2. ALL FONT FILES IN /system/etc/fonts.xml WITH TRAN/TOS/SANS ==="
-grep -C 3 -iE 'tran|tos|sans-serif' /system/etc/fonts.xml | head -n 40
+echo "=== FONTS IN /product/fonts ==="
+ls -la /product/fonts/
 
-echo "=== 3. SEARCHING FOR ALL FONT FILES IN THE SYSTEM ==="
-find /system /product /system_ext /vendor /odm /data -name '*.ttf' -o -name '*.otf' 2>/dev/null | grep -v '/data/adb/modules' | head -n 50
+echo "=== FONTS IN /system/fonts (first 30) ==="
+ls -la /system/fonts/ | head -n 30
 
-echo "=== 4. CURRENT ACTIVE THEME OVERLAY APKS ==="
-cmd overlay list | grep -iE 'font|theme|tran'
+echo "=== FONTS.XML LOCATION AND HEAD ==="
+for xml in /system/etc/fonts.xml /product/etc/fonts.xml /system_ext/etc/fonts.xml /vendor/etc/fonts.xml; do
+    if [ -f "$xml" ]; then
+        echo "Found $xml"
+        head -n 25 "$xml"
+    fi
+done
+
+echo "=== ACTIVE MOUNTS ON FONTS ==="
+mount | grep -iE 'fonts|ttf|otf'
 """
 
 with open(r"C:\Users\Admin\deep_inspect.sh", "w", newline="\n") as f:
