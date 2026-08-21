@@ -56,6 +56,20 @@ for f in /system/fonts/NotoSansArmenian*.ttf; do [ -f "$f" ] && mount -o bind "$
 for f in /system/fonts/NotoSansGeorgian*.ttf; do [ -f "$f" ] && mount -o bind "$GF" "$f" 2>/dev/null; done
 for f in /system/fonts/AndroidClock*.ttf; do [ -f "$f" ] && mount -o bind "$RF" "$f" 2>/dev/null; done
 
+# 7. Bind-mount all bundled patched language variable fonts
+for f in "$FD"/*-VF.ttf; do
+    [ -f "$f" ] || continue
+    fname=$(basename "$f")
+    [ -f "/system/fonts/$fname" ] && mount -o bind "$f" "/system/fonts/$fname" 2>/dev/null
+done
+
+# 8. Bind-mount world language Bold variants over Regular
+for bfont in /system/fonts/*Bold*.ttf /system/fonts/*Bold*.otf; do
+    [ -f "$bfont" ] || continue
+    rname=$(basename "$bfont" | sed 's/Bold/Regular/g')
+    [ "$rname" != "$(basename "$bfont")" ] && [ -f "/system/fonts/$rname" ] && mount -o bind "$bfont" "/system/fonts/$rname" 2>/dev/null
+done
+
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done
 
 # Replace in-app emoji fonts

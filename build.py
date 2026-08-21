@@ -10,6 +10,7 @@ OUTPUT_ZIP = os.path.join(DIST_DIR, "iOS_Bold_Font_Emoji_v2.0_Ultra.zip")
 
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 APPLE_FONTS_DIR = os.path.join(ASSETS_DIR, "apple_fonts")
+PATCHED_VF_DIR = os.path.join(ASSETS_DIR, "patched_vf")
 
 def clean_module_dir():
     if os.path.exists(MODULE_DIR):
@@ -94,6 +95,12 @@ def copy_assets():
         os.path.join(sysfonts, "SF-Georgian.ttf"),
     )
 
+    # Copy all patched language variable fonts
+    if os.path.exists(PATCHED_VF_DIR):
+        for fn in os.listdir(PATCHED_VF_DIR):
+            if fn.endswith(".ttf") or fn.endswith(".otf"):
+                shutil.copy2(os.path.join(PATCHED_VF_DIR, fn), os.path.join(sysfonts, fn))
+
 def write_module_scripts():
     write_lf(os.path.join(MODULE_DIR, "module.prop"), """\
 id=ios_bold_font_emoji
@@ -101,7 +108,7 @@ name= iOS Bold Font & iOS 26.4 Emoji
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Apple SF Pro Text Heavy (800) + Apple New York Serif + Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. 100% true static bold coverage for TranSans, Roboto, and all UI elements.
+description= Apple SF Pro Text Heavy (800) + Apple New York Serif + Noto Nastaliq Urdu Bold + iOS 26.4 Emoji + ALL World Languages Bold (Hindi, Bengali, Tamil, Telugu, Malayalam, Gujarati, Punjabi, Thai, Lao, Myanmar, etc.).
 """)
 
     write_lf(os.path.join(MODULE_DIR, "customize.sh"), r"""#!/system/bin/sh
@@ -209,7 +216,6 @@ for f in \
     MiSans-Regular.ttf MiSans-Medium.ttf MiSans-Demibold.ttf MiSans-Bold.ttf \
     MiSans-Heavy.ttf MiSans-Light.ttf MiSans-Thin.ttf MiSans-Normal.ttf \
     MiSans-Semibold.ttf MiSansLatin-Regular.ttf MiSansLatin-Bold.ttf \
-    MiSansVF.ttf MiSans_VF.ttf \
     Miui-Regular.ttf Miui-Bold.ttf \
     OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.ttf \
     OPlusSans2.0-VF.ttf OPlusSans3.0-VF.ttf \
@@ -232,7 +238,7 @@ done
 ui_print "      ✔ Apple New York Serif fonts deployed"
 ui_print " "
 
-ui_print "  [+] Step 3/5: Deploying Noto Nastaliq Urdu Bold & Multilingual Fonts..."
+ui_print "  [+] Step 3/5: Deploying Noto Nastaliq Urdu Bold & Multilingual Bold Fonts..."
 for f in \
     NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
     NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf
@@ -254,6 +260,16 @@ for f in NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf NotoSansHebrew-Mediu
 for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf NotoSansArmenian-Medium.ttf; do place "$AMF" "$f"; done
 for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf NotoSansGeorgian-Medium.ttf; do place "$GF" "$f"; done
 for f in AndroidClock.ttf GoogleSansClock-Regular.ttf; do place "$RF" "$f"; done
+
+# Deploy world language bold fallbacks
+for pdir in /system/fonts /product/fonts; do
+    [ -d "$pdir" ] || continue
+    for bfont in "$pdir"/*Bold*.ttf "$pdir"/*Bold*.otf; do
+        [ -f "$bfont" ] || continue
+        rname=$(basename "$bfont" | sed 's/Bold/Regular/g')
+        [ -f "$pdir/$rname" ] && place "$bfont" "$rname"
+    done
+done
 
 ui_print "      ✔ Multilingual typography deployed"
 ui_print " "
@@ -395,6 +411,20 @@ for f in /system/fonts/NotoSansHebrew*.ttf; do [ -f "$f" ] && mount -o bind "$HF
 for f in /system/fonts/NotoSansArmenian*.ttf; do [ -f "$f" ] && mount -o bind "$AMF" "$f" 2>/dev/null; done
 for f in /system/fonts/NotoSansGeorgian*.ttf; do [ -f "$f" ] && mount -o bind "$GF" "$f" 2>/dev/null; done
 for f in /system/fonts/AndroidClock*.ttf; do [ -f "$f" ] && mount -o bind "$RF" "$f" 2>/dev/null; done
+
+# 7. Bind-mount all bundled patched language variable fonts
+for f in "$FD"/*-VF.ttf; do
+    [ -f "$f" ] || continue
+    fname=$(basename "$f")
+    [ -f "/system/fonts/$fname" ] && mount -o bind "$f" "/system/fonts/$fname" 2>/dev/null
+done
+
+# 8. Bind-mount world language Bold variants over Regular
+for bfont in /system/fonts/*Bold*.ttf /system/fonts/*Bold*.otf; do
+    [ -f "$bfont" ] || continue
+    rname=$(basename "$bfont" | sed 's/Bold/Regular/g')
+    [ "$rname" != "$(basename "$bfont")" ] && [ -f "/system/fonts/$rname" ] && mount -o bind "$bfont" "/system/fonts/$rname" 2>/dev/null
+done
 
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done
 

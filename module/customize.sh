@@ -103,7 +103,6 @@ for f in \
     MiSans-Regular.ttf MiSans-Medium.ttf MiSans-Demibold.ttf MiSans-Bold.ttf \
     MiSans-Heavy.ttf MiSans-Light.ttf MiSans-Thin.ttf MiSans-Normal.ttf \
     MiSans-Semibold.ttf MiSansLatin-Regular.ttf MiSansLatin-Bold.ttf \
-    MiSansVF.ttf MiSans_VF.ttf \
     Miui-Regular.ttf Miui-Bold.ttf \
     OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.ttf \
     OPlusSans2.0-VF.ttf OPlusSans3.0-VF.ttf \
@@ -126,7 +125,7 @@ done
 ui_print "      ✔ Apple New York Serif fonts deployed"
 ui_print " "
 
-ui_print "  [+] Step 3/5: Deploying Noto Nastaliq Urdu Bold & Multilingual Fonts..."
+ui_print "  [+] Step 3/5: Deploying Noto Nastaliq Urdu Bold & Multilingual Bold Fonts..."
 for f in \
     NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
     NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf
@@ -148,6 +147,16 @@ for f in NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf NotoSansHebrew-Mediu
 for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf NotoSansArmenian-Medium.ttf; do place "$AMF" "$f"; done
 for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf NotoSansGeorgian-Medium.ttf; do place "$GF" "$f"; done
 for f in AndroidClock.ttf GoogleSansClock-Regular.ttf; do place "$RF" "$f"; done
+
+# Deploy world language bold fallbacks
+for pdir in /system/fonts /product/fonts; do
+    [ -d "$pdir" ] || continue
+    for bfont in "$pdir"/*Bold*.ttf "$pdir"/*Bold*.otf; do
+        [ -f "$bfont" ] || continue
+        rname=$(basename "$bfont" | sed 's/Bold/Regular/g')
+        [ -f "$pdir/$rname" ] && place "$bfont" "$rname"
+    done
+done
 
 ui_print "      ✔ Multilingual typography deployed"
 ui_print " "
