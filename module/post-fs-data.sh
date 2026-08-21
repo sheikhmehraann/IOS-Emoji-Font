@@ -10,6 +10,7 @@ MODPATH=${0%/*}
 FONT_DIR="$MODPATH/system/fonts"
 VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
 HEAVY_FONT="$FONT_DIR/SF-Pro-Heavy.otf"
+BLACK_FONT="$FONT_DIR/SF-Pro-Black.otf"
 BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
 ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
 ARABIC_FONT="$FONT_DIR/SF-Arabic.ttf"
@@ -45,7 +46,7 @@ for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /
                         mount -o bind "$ROUND_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
-                *Arabic*|*arabic*)
+                *Arabic*|*arabic*|*Urdu*|*urdu*)
                     if [ -f "$ARABIC_FONT" ]; then
                         mount -o bind "$ARABIC_FONT" "$fpath" 2>/dev/null
                     fi
@@ -68,9 +69,22 @@ for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /
                 *Variable*|*VF*|*Flex*)
                     if [ -f "$VAR_FONT" ]; then
                         mount -o bind "$VAR_FONT" "$fpath" 2>/dev/null
+                    elif [ -f "$HEAVY_FONT" ]; then
+                        mount -o bind "$HEAVY_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
-                *Symbol*|*symbol*|*NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansCJK*|*NotoSerifCJK*) ;;
+                *NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansGurmukhi*|*NotoSansGujarati*|*NotoSansOriya*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansTibetan*|*NotoSansEthiopic*|*NotoSansCherokee*|*NotoSansCanadianAboriginal*|*NotoSansCJK*|*NotoSerifCJK*|*SourceHanSans*)
+                    # If this is a regular/light font and a bold version exists on the device, bind-mount bold over it!
+                    case "$fname" in
+                        *Regular*|*Light*|*Thin*|*Medium*)
+                            bold_candidate=$(echo "$fpath" | sed -e 's/Regular/Bold/g' -e 's/Light/Bold/g' -e 's/Thin/Bold/g' -e 's/Medium/Bold/g')
+                            if [ -f "$bold_candidate" ] && [ "$bold_candidate" != "$fpath" ]; then
+                                mount -o bind "$bold_candidate" "$fpath" 2>/dev/null
+                            fi
+                            ;;
+                    esac
+                    ;;
+                *Symbol*|*symbol*|*Math*|*math*) ;;
                 *)
                     if [ -f "$MODPATH/system/fonts/$fname" ]; then
                         mount -o bind "$MODPATH/system/fonts/$fname" "$fpath" 2>/dev/null

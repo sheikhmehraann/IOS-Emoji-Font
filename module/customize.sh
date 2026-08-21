@@ -40,6 +40,7 @@ ui_print " "
 FONT_DIR="$MODPATH/system/fonts"
 VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
 HEAVY_FONT="$FONT_DIR/SF-Pro-Heavy.otf"
+BLACK_FONT="$FONT_DIR/SF-Pro-Black.otf"
 BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
 ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
 ARABIC_FONT="$FONT_DIR/SF-Arabic.ttf"
@@ -132,7 +133,7 @@ for f in $clock_targets; do
     cp -f "$ROUND_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
 done
 
-# 3. Multilingual Scripts (SF Arabic, SF Hebrew, SF Armenian, SF Georgian)
+# 3. Multilingual Scripts (SF Arabic/Urdu, SF Hebrew, SF Armenian, SF Georgian)
 arabic_targets="
 NotoSansArabic-Regular.ttf NotoSansArabic-Bold.ttf NotoSansArabic-Medium.ttf
 NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf NotoNaskhArabicUI-Regular.ttf NotoNaskhArabicUI-Bold.ttf
@@ -190,7 +191,7 @@ for f in $heavy_targets; do
     cp -f "$HEAVY_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
 done
 
-# 5. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI font
+# 5. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI or script font
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     if [ -d "$pdir" ]; then
         sub="${pdir#/}"
@@ -203,7 +204,7 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
                     cp -f "$ROUND_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$ROUND_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
-                *Arabic*|*arabic*)
+                *Arabic*|*arabic*|*Urdu*|*urdu*)
                     cp -f "$ARABIC_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$ARABIC_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
@@ -223,7 +224,18 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
                     cp -f "$VAR_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$VAR_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
-                *Symbol*|*symbol*|*NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansCJK*|*NotoSerifCJK*) ;;
+                *NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansGurmukhi*|*NotoSansGujarati*|*NotoSansOriya*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansTibetan*|*NotoSansEthiopic*|*NotoSansCherokee*|*NotoSansCanadianAboriginal*|*NotoSansCJK*|*NotoSerifCJK*|*SourceHanSans*)
+                    case "$fname" in
+                        *Regular*|*Light*|*Thin*|*Medium*)
+                            bold_src=$(echo "$fpath" | sed -e 's/Regular/Bold/g' -e 's/Light/Bold/g' -e 's/Thin/Bold/g' -e 's/Medium/Bold/g')
+                            if [ -f "$bold_src" ] && [ "$bold_src" != "$fpath" ]; then
+                                cp -f "$bold_src" "$MODPATH/$sub/$fname" 2>/dev/null
+                                cp -f "$bold_src" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                            fi
+                            ;;
+                    esac
+                    ;;
+                *Symbol*|*symbol*|*Math*|*math*) ;;
                 *)
                     cp -f "$HEAVY_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$HEAVY_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null

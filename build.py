@@ -113,12 +113,13 @@ def copy_assets():
 
     # 2. SF-Pro Text Heavy & Bold
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Heavy.otf"), os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Heavy.otf"))
+    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Black.otf"), os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Black.otf"))
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Bold.otf"), os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Bold.otf"))
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Rounded-Bold.otf"), os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Rounded.otf"))
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Heavy.otf"), os.path.join(MODULE_DIR, "system", "fonts", "Roboto-Regular.ttf"))
-    print("  + SF-Pro-Heavy.otf, SF-Pro-Bold.otf, SF-Pro-Rounded.otf, Roboto-Regular.ttf")
+    print("  + SF-Pro-Heavy.otf, SF-Pro-Black.otf, SF-Pro-Bold.otf, SF-Pro-Rounded.otf, Roboto-Regular.ttf")
 
-    # 3. Multilingual Apple Scripts (Arabic, Hebrew, Armenian, Georgian)
+    # 3. Multilingual Apple Scripts (Arabic/Urdu, Hebrew, Armenian, Georgian)
     patch_variable_font_to_bold(
         os.path.join(APPLE_FONTS_DIR, "SF-Arabic.ttf"),
         os.path.join(MODULE_DIR, "system", "fonts", "SF-Arabic.ttf"),
@@ -139,7 +140,7 @@ def copy_assets():
         os.path.join(MODULE_DIR, "system", "fonts", "SF-Georgian.ttf"),
         750.0
     )
-    print("  + Multilingual Scripts: SF-Arabic.ttf, SF-Hebrew.ttf, SF-Armenian.ttf, SF-Georgian.ttf (Bold Enforced)")
+    print("  + Multilingual Scripts: SF-Arabic.ttf (Urdu/Arabic), SF-Hebrew.ttf, SF-Armenian.ttf, SF-Georgian.ttf (Bold Enforced)")
 
 def write_module_scripts():
     print("[*] Generating universal multi-partition and multilingual deployment scripts...")
@@ -164,6 +165,7 @@ MODPATH=${0%/*}
 FONT_DIR="$MODPATH/system/fonts"
 VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
 HEAVY_FONT="$FONT_DIR/SF-Pro-Heavy.otf"
+BLACK_FONT="$FONT_DIR/SF-Pro-Black.otf"
 BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
 ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
 ARABIC_FONT="$FONT_DIR/SF-Arabic.ttf"
@@ -199,7 +201,7 @@ for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /
                         mount -o bind "$ROUND_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
-                *Arabic*|*arabic*)
+                *Arabic*|*arabic*|*Urdu*|*urdu*)
                     if [ -f "$ARABIC_FONT" ]; then
                         mount -o bind "$ARABIC_FONT" "$fpath" 2>/dev/null
                     fi
@@ -222,9 +224,22 @@ for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /
                 *Variable*|*VF*|*Flex*)
                     if [ -f "$VAR_FONT" ]; then
                         mount -o bind "$VAR_FONT" "$fpath" 2>/dev/null
+                    elif [ -f "$HEAVY_FONT" ]; then
+                        mount -o bind "$HEAVY_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
-                *Symbol*|*symbol*|*NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansCJK*|*NotoSerifCJK*) ;;
+                *NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansGurmukhi*|*NotoSansGujarati*|*NotoSansOriya*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansTibetan*|*NotoSansEthiopic*|*NotoSansCherokee*|*NotoSansCanadianAboriginal*|*NotoSansCJK*|*NotoSerifCJK*|*SourceHanSans*)
+                    # If this is a regular/light font and a bold version exists on the device, bind-mount bold over it!
+                    case "$fname" in
+                        *Regular*|*Light*|*Thin*|*Medium*)
+                            bold_candidate=$(echo "$fpath" | sed -e 's/Regular/Bold/g' -e 's/Light/Bold/g' -e 's/Thin/Bold/g' -e 's/Medium/Bold/g')
+                            if [ -f "$bold_candidate" ] && [ "$bold_candidate" != "$fpath" ]; then
+                                mount -o bind "$bold_candidate" "$fpath" 2>/dev/null
+                            fi
+                            ;;
+                    esac
+                    ;;
+                *Symbol*|*symbol*|*Math*|*math*) ;;
                 *)
                     if [ -f "$MODPATH/system/fonts/$fname" ]; then
                         mount -o bind "$MODPATH/system/fonts/$fname" "$fpath" 2>/dev/null
@@ -284,6 +299,7 @@ ui_print " "
 FONT_DIR="$MODPATH/system/fonts"
 VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
 HEAVY_FONT="$FONT_DIR/SF-Pro-Heavy.otf"
+BLACK_FONT="$FONT_DIR/SF-Pro-Black.otf"
 BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
 ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
 ARABIC_FONT="$FONT_DIR/SF-Arabic.ttf"
@@ -376,7 +392,7 @@ for f in $clock_targets; do
     cp -f "$ROUND_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
 done
 
-# 3. Multilingual Scripts (SF Arabic, SF Hebrew, SF Armenian, SF Georgian)
+# 3. Multilingual Scripts (SF Arabic/Urdu, SF Hebrew, SF Armenian, SF Georgian)
 arabic_targets="
 NotoSansArabic-Regular.ttf NotoSansArabic-Bold.ttf NotoSansArabic-Medium.ttf
 NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf NotoNaskhArabicUI-Regular.ttf NotoNaskhArabicUI-Bold.ttf
@@ -434,7 +450,7 @@ for f in $heavy_targets; do
     cp -f "$HEAVY_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
 done
 
-# 5. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI font
+# 5. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI or script font
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     if [ -d "$pdir" ]; then
         sub="${pdir#/}"
@@ -447,7 +463,7 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
                     cp -f "$ROUND_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$ROUND_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
-                *Arabic*|*arabic*)
+                *Arabic*|*arabic*|*Urdu*|*urdu*)
                     cp -f "$ARABIC_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$ARABIC_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
@@ -467,7 +483,18 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
                     cp -f "$VAR_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$VAR_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
-                *Symbol*|*symbol*|*NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansCJK*|*NotoSerifCJK*) ;;
+                *NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansGurmukhi*|*NotoSansGujarati*|*NotoSansOriya*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansTibetan*|*NotoSansEthiopic*|*NotoSansCherokee*|*NotoSansCanadianAboriginal*|*NotoSansCJK*|*NotoSerifCJK*|*SourceHanSans*)
+                    case "$fname" in
+                        *Regular*|*Light*|*Thin*|*Medium*)
+                            bold_src=$(echo "$fpath" | sed -e 's/Regular/Bold/g' -e 's/Light/Bold/g' -e 's/Thin/Bold/g' -e 's/Medium/Bold/g')
+                            if [ -f "$bold_src" ] && [ "$bold_src" != "$fpath" ]; then
+                                cp -f "$bold_src" "$MODPATH/$sub/$fname" 2>/dev/null
+                                cp -f "$bold_src" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                            fi
+                            ;;
+                    esac
+                    ;;
+                *Symbol*|*symbol*|*Math*|*math*) ;;
                 *)
                     cp -f "$HEAVY_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$HEAVY_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
