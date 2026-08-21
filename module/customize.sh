@@ -86,14 +86,21 @@ if [ -n "$ZIPFILE" ] && [ -f "$ZIPFILE" ]; then
     unzip -o "$ZIPFILE" 'system/*' -d "$MODPATH" >/dev/null 2>&1
 fi
 
+# Create target directories for ALL partition mount types
+mkdir -p "$MODPATH/system/fonts" 2>/dev/null
+mkdir -p "$MODPATH/product/fonts" 2>/dev/null
+mkdir -p "$MODPATH/system_ext/fonts" 2>/dev/null
+mkdir -p "$MODPATH/vendor/fonts" 2>/dev/null
+
 mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
+mkdir -p "$MODPATH/system/vendor/fonts" 2>/dev/null
 
-ui_print "  [+] Step 1/4: Expanding SF Pro Heavy to ALL System & UI Targets..."
+ui_print "  [+] Step 1/4: Expanding SF Pro Heavy to ALL Partition Targets..."
 
 # 1. Baseline Common Font Targets across AOSP, Pixel, Samsung, Xiaomi, OnePlus, Transsion
 common_targets="
-Roboto-Bold.ttf Roboto-Medium.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf
+Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf
 RobotoStatic-Regular.ttf RobotoStatic-Bold.ttf RobotoStatic-Medium.ttf RobotoStatic-Italic.ttf RobotoStatic-BoldItalic.ttf RobotoStatic-Light.ttf RobotoStatic-Thin.ttf RobotoStatic-Black.ttf
 Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf RobotoFlex-Regular.ttf
 RobotoCondensed-Regular.ttf RobotoCondensed-Bold.ttf RobotoCondensed-Italic.ttf RobotoCondensed-BoldItalic.ttf RobotoCondensed-Light.ttf RobotoCondensed-LightItalic.ttf RobotoCondensed-Medium.ttf RobotoCondensed-MediumItalic.ttf
@@ -109,30 +116,33 @@ OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.tt
 "
 
 for f in $common_targets; do
-    cp -f "$BASE_FONT" "$FONT_DIR/$f" 2>/dev/null
+    cp -f "$BASE_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$BASE_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$BASE_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+    cp -f "$BASE_FONT" "$MODPATH/vendor/fonts/$f" 2>/dev/null
     cp -f "$BASE_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
     cp -f "$BASE_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
 done
 
 # 2. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI font
-for pdir in /system/fonts /product/fonts /system/product/fonts /system_ext/fonts /system/system_ext/fonts /vendor/fonts; do
+for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     if [ -d "$pdir" ]; then
+        sub="${pdir#/}"
         for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
             [ -f "$fpath" ] || continue
             fname=$(basename "$fpath")
             case "$fname" in
                 *Emoji*|*emoji*|*Symbol*|*symbol*|*Clock*|*clock*|*NotoSansHebrew*|*NotoSansArabic*|*NotoSansThai*) ;;
                 *)
-                    cp -f "$BASE_FONT" "$FONT_DIR/$fname" 2>/dev/null
-                    cp -f "$BASE_FONT" "$MODPATH/system/product/fonts/$fname" 2>/dev/null
-                    cp -f "$BASE_FONT" "$MODPATH/system/system_ext/fonts/$fname" 2>/dev/null
+                    cp -f "$BASE_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$BASE_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
             esac
         done
     fi
 done
 
-ui_print "      ✔ Universal coverage generated for all ROM UI fonts & weights"
+ui_print "      ✔ Universal coverage generated across /system, /product, and /system_ext"
 ui_print " "
 
 ui_print "  [+] Step 2/4: Deploying iOS 26.4 Apple Color Emoji..."
@@ -140,6 +150,7 @@ variants="SamsungColorEmoji.ttf LGNotoColorEmoji.ttf HTC_ColorEmoji.ttf AndroidE
 for font in $variants; do
     if [ -f "/system/fonts/$font" ] || [ -f "/product/fonts/$font" ]; then
         cp -f "$FONT_DIR/$FONT_EMOJI" "$FONT_DIR/$font" 2>/dev/null
+        cp -f "$FONT_DIR/$FONT_EMOJI" "$MODPATH/product/fonts/$font" 2>/dev/null
         ui_print "      ✔ Mapped OEM emoji: $font"
     fi
 done
@@ -150,6 +161,7 @@ for xml in /system/etc/fonts.xml /product/etc/fonts.xml /system_ext/etc/fonts.xm
         for f in $fontfiles; do
             if [ "$f" != "NotoColorEmoji.ttf" ] && [ -n "$f" ]; then
                 cp -f "$FONT_DIR/$FONT_EMOJI" "$FONT_DIR/$f" 2>/dev/null
+                cp -f "$FONT_DIR/$FONT_EMOJI" "$MODPATH/product/fonts/$f" 2>/dev/null
                 ui_print "      ✔ Linked fonts.xml emoji: $f"
             fi
         done
@@ -181,8 +193,10 @@ set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
 set_perm "$MODPATH/service.sh" 0 0 0755
 set_perm "$MODPATH/action.sh" 0 0 0755
 chcon -R u:object_r:system_file:s0 "$MODPATH/system" 2>/dev/null
+chcon -R u:object_r:system_file:s0 "$MODPATH/product" 2>/dev/null
+chcon -R u:object_r:system_file:s0 "$MODPATH/system_ext" 2>/dev/null
 ui_print "      ✔ Permissions (0755/0644) verified"
-ui_print "      ✔ SELinux context applied (system_file)"
+ui_print "      ✔ SELinux context applied"
 ui_print " "
 
 ui_print "  ─────────────────────────────────────────"

@@ -2,14 +2,12 @@ import os
 import shutil
 import zipfile
 import hashlib
+import struct
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODULE_DIR = os.path.join(BASE_DIR, "module")
 DIST_DIR = os.path.join(BASE_DIR, "dist")
 OUTPUT_ZIP = os.path.join(DIST_DIR, "iOS_Bold_Font_Emoji_v2.0_Ultra.zip")
-
-EXTRACTED_FONT_DIR = os.path.join(BASE_DIR, "extracted_font")
-EXTRACTED_EMOJI_DIR = os.path.join(BASE_DIR, "extracted_emoji")
 
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 
@@ -20,13 +18,63 @@ def clean_module_dir():
 def ensure_dirs():
     os.makedirs(os.path.join(MODULE_DIR, "META-INF", "com", "google", "android"), exist_ok=True)
     os.makedirs(os.path.join(MODULE_DIR, "system", "fonts"), exist_ok=True)
-    os.makedirs(os.path.join(MODULE_DIR, "system", "product", "fonts"), exist_ok=True)
-    os.makedirs(os.path.join(MODULE_DIR, "system", "system_ext", "fonts"), exist_ok=True)
     os.makedirs(DIST_DIR, exist_ok=True)
 
 def write_lf_file(filepath, content):
     with open(filepath, "wb") as f:
         f.write(content.replace("\r\n", "\n").encode("utf-8"))
+
+def patch_font_bold_flags(in_path, out_path):
+    with open(in_path, "rb") as f:
+        data = bytearray(f.read())
+        
+    num_tables = struct.unpack(">H", data[4:6])[0]
+    tables = {}
+    for i in range(num_tables):
+        tag = data[12+i*16:16+i*16].decode("latin-1")
+        offset = struct.unpack(">I", data[20+i*16:24+i*16])[0]
+        length = struct.unpack(">I", data[24+i*16:28+i*16])[0]
+        tables[tag] = (offset, length, 12+i*16)
+        
+    # 1. Update OS/2 table for Bold / Heavy weight
+    if "OS/2" in tables:
+        off, length, rec_off = tables["OS/2"]
+        # Set usWeightClass to 800 (Heavy/Bold)
+        struct.pack_into(">H", data, off+4, 800)
+        # Set fsSelection bit 5 (Bold)
+        sel = struct.unpack(">H", data[off+62:off+64])[0]
+        sel |= 0x0020
+        struct.pack_into(">H", data, off+62, sel)
+        
+    # 2. Update head table for Bold macStyle
+    if "head" in tables:
+        off, length, rec_off = tables["head"]
+        mac_style = struct.unpack(">H", data[off+44:off+46])[0]
+        mac_style |= 0x0001
+        struct.pack_into(">H", data, off+44, mac_style)
+        
+    # Recalculate table checksums
+    for tag, (off, length, rec_off) in tables.items():
+        padded_len = (length + 3) & ~3
+        table_bytes = data[off:off+length] + b"\x00" * (padded_len - length)
+        csum = sum(struct.unpack(f">{padded_len//4}I", table_bytes)) & 0xFFFFFFFF
+        if tag == "head":
+            struct.pack_into(">I", data, off+8, 0)
+            table_bytes = data[off:off+length] + b"\x00" * (padded_len - length)
+            csum = sum(struct.unpack(f">{padded_len//4}I", table_bytes)) & 0xFFFFFFFF
+        struct.pack_into(">I", data, rec_off+4, csum)
+        
+    # Recalculate entire font checkSumAdjustment
+    if "head" in tables:
+        head_off = tables["head"][0]
+        padded_total = (len(data) + 3) & ~3
+        full_bytes = data + b"\x00" * (padded_total - len(data))
+        total_csum = sum(struct.unpack(f">{padded_total//4}I", full_bytes)) & 0xFFFFFFFF
+        adjustment = (0xB1B0AFBA - total_csum) & 0xFFFFFFFF
+        struct.pack_into(">I", data, head_off+8, adjustment)
+        
+    with open(out_path, "wb") as f:
+        f.write(data)
 
 def copy_assets():
     print("[*] Copying META-INF installer binaries...")
@@ -40,13 +88,14 @@ def copy_assets():
     shutil.copy2(emoji_src, os.path.join(MODULE_DIR, "system", "fonts", "NotoColorEmoji.ttf"))
     print("  + system/fonts/NotoColorEmoji.ttf")
 
-    print("[*] Copying SF Pro Text Heavy base font...")
+    print("[*] Patching & deploying SF Pro Text Heavy (True Bold) font...")
     font_heavy_src = os.path.join(ASSETS_DIR, "system", "fonts", "Roboto-Regular.ttf")
-    shutil.copy2(font_heavy_src, os.path.join(MODULE_DIR, "system", "fonts", "Roboto-Regular.ttf"))
-    print("  + system/fonts/Roboto-Regular.ttf")
+    font_heavy_dst = os.path.join(MODULE_DIR, "system", "fonts", "Roboto-Regular.ttf")
+    patch_font_bold_flags(font_heavy_src, font_heavy_dst)
+    print("  + system/fonts/Roboto-Regular.ttf (Native Bold Flags Active)")
 
 def write_module_scripts():
-    print("[*] Generating universal font replacement scripts...")
+    print("[*] Generating universal multi-partition font scripts...")
 
     module_prop = """id=ios_bold_font_emoji
 name= iOS Bold Font & iOS 26.4 Emoji
@@ -68,7 +117,7 @@ MODPATH=${0%/*}
 BASE_FONT="$MODPATH/system/fonts/Roboto-Regular.ttf"
 BASE_EMOJI="$MODPATH/system/fonts/NotoColorEmoji.ttf"
 
-# 1. Clean dynamic Android 12-16 FontManager caches before system_server starts
+# Clean dynamic Android 12-16 FontManager caches before system_server starts
 rm -rf /data/fonts/* 2>/dev/null
 rm -rf /data/system/font_fallback.xml 2>/dev/null
 rm -rf /data/fonts/run_metadata.xml 2>/dev/null
@@ -78,9 +127,9 @@ rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 mkdir -p /data/fonts 2>/dev/null
 chmod 755 /data/fonts 2>/dev/null
 
-# 2. Universal Dynamic Bind-Mount for ALL partitions and font files
+# Universal Dynamic Bind-Mount across ALL active partitions & fonts
 if [ -f "$BASE_FONT" ]; then
-    for target_dir in /system/fonts /product/fonts /system_ext/fonts /system/product/fonts /system/system_ext/fonts /vendor/fonts; do
+    for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /system/product/fonts /system/system_ext/fonts; do
         if [ -d "$target_dir" ]; then
             for fpath in "$target_dir"/*.ttf "$target_dir"/*.otf; do
                 [ -f "$fpath" ] || continue
@@ -95,8 +144,10 @@ if [ -f "$BASE_FONT" ]; then
                     *)
                         if [ -f "$MODPATH/system/fonts/$fname" ]; then
                             mount -o bind "$MODPATH/system/fonts/$fname" "$fpath" 2>/dev/null
-                        elif [ -f "$MODPATH/system/product/fonts/$fname" ]; then
-                            mount -o bind "$MODPATH/system/product/fonts/$fname" "$fpath" 2>/dev/null
+                        elif [ -f "$MODPATH/product/fonts/$fname" ]; then
+                            mount -o bind "$MODPATH/product/fonts/$fname" "$fpath" 2>/dev/null
+                        elif [ -f "$MODPATH/system_ext/fonts/$fname" ]; then
+                            mount -o bind "$MODPATH/system_ext/fonts/$fname" "$fpath" 2>/dev/null
                         else
                             mount -o bind "$BASE_FONT" "$fpath" 2>/dev/null
                         fi
@@ -196,14 +247,21 @@ if [ -n "$ZIPFILE" ] && [ -f "$ZIPFILE" ]; then
     unzip -o "$ZIPFILE" 'system/*' -d "$MODPATH" >/dev/null 2>&1
 fi
 
+# Create target directories for ALL partition mount types
+mkdir -p "$MODPATH/system/fonts" 2>/dev/null
+mkdir -p "$MODPATH/product/fonts" 2>/dev/null
+mkdir -p "$MODPATH/system_ext/fonts" 2>/dev/null
+mkdir -p "$MODPATH/vendor/fonts" 2>/dev/null
+
 mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
+mkdir -p "$MODPATH/system/vendor/fonts" 2>/dev/null
 
-ui_print "  [+] Step 1/4: Expanding SF Pro Heavy to ALL System & UI Targets..."
+ui_print "  [+] Step 1/4: Expanding SF Pro Heavy to ALL Partition Targets..."
 
 # 1. Baseline Common Font Targets across AOSP, Pixel, Samsung, Xiaomi, OnePlus, Transsion
 common_targets="
-Roboto-Bold.ttf Roboto-Medium.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf
+Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf
 RobotoStatic-Regular.ttf RobotoStatic-Bold.ttf RobotoStatic-Medium.ttf RobotoStatic-Italic.ttf RobotoStatic-BoldItalic.ttf RobotoStatic-Light.ttf RobotoStatic-Thin.ttf RobotoStatic-Black.ttf
 Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf RobotoFlex-Regular.ttf
 RobotoCondensed-Regular.ttf RobotoCondensed-Bold.ttf RobotoCondensed-Italic.ttf RobotoCondensed-BoldItalic.ttf RobotoCondensed-Light.ttf RobotoCondensed-LightItalic.ttf RobotoCondensed-Medium.ttf RobotoCondensed-MediumItalic.ttf
@@ -219,30 +277,33 @@ OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.tt
 "
 
 for f in $common_targets; do
-    cp -f "$BASE_FONT" "$FONT_DIR/$f" 2>/dev/null
+    cp -f "$BASE_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$BASE_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$BASE_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+    cp -f "$BASE_FONT" "$MODPATH/vendor/fonts/$f" 2>/dev/null
     cp -f "$BASE_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
     cp -f "$BASE_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
 done
 
 # 2. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI font
-for pdir in /system/fonts /product/fonts /system/product/fonts /system_ext/fonts /system/system_ext/fonts /vendor/fonts; do
+for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     if [ -d "$pdir" ]; then
+        sub="${pdir#/}"
         for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
             [ -f "$fpath" ] || continue
             fname=$(basename "$fpath")
             case "$fname" in
                 *Emoji*|*emoji*|*Symbol*|*symbol*|*Clock*|*clock*|*NotoSansHebrew*|*NotoSansArabic*|*NotoSansThai*) ;;
                 *)
-                    cp -f "$BASE_FONT" "$FONT_DIR/$fname" 2>/dev/null
-                    cp -f "$BASE_FONT" "$MODPATH/system/product/fonts/$fname" 2>/dev/null
-                    cp -f "$BASE_FONT" "$MODPATH/system/system_ext/fonts/$fname" 2>/dev/null
+                    cp -f "$BASE_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$BASE_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
             esac
         done
     fi
 done
 
-ui_print "      ✔ Universal coverage generated for all ROM UI fonts & weights"
+ui_print "      ✔ Universal coverage generated across /system, /product, and /system_ext"
 ui_print " "
 
 ui_print "  [+] Step 2/4: Deploying iOS 26.4 Apple Color Emoji..."
@@ -250,6 +311,7 @@ variants="SamsungColorEmoji.ttf LGNotoColorEmoji.ttf HTC_ColorEmoji.ttf AndroidE
 for font in $variants; do
     if [ -f "/system/fonts/$font" ] || [ -f "/product/fonts/$font" ]; then
         cp -f "$FONT_DIR/$FONT_EMOJI" "$FONT_DIR/$font" 2>/dev/null
+        cp -f "$FONT_DIR/$FONT_EMOJI" "$MODPATH/product/fonts/$font" 2>/dev/null
         ui_print "      ✔ Mapped OEM emoji: $font"
     fi
 done
@@ -260,6 +322,7 @@ for xml in /system/etc/fonts.xml /product/etc/fonts.xml /system_ext/etc/fonts.xm
         for f in $fontfiles; do
             if [ "$f" != "NotoColorEmoji.ttf" ] && [ -n "$f" ]; then
                 cp -f "$FONT_DIR/$FONT_EMOJI" "$FONT_DIR/$f" 2>/dev/null
+                cp -f "$FONT_DIR/$FONT_EMOJI" "$MODPATH/product/fonts/$f" 2>/dev/null
                 ui_print "      ✔ Linked fonts.xml emoji: $f"
             fi
         done
@@ -291,8 +354,10 @@ set_perm "$MODPATH/post-fs-data.sh" 0 0 0755
 set_perm "$MODPATH/service.sh" 0 0 0755
 set_perm "$MODPATH/action.sh" 0 0 0755
 chcon -R u:object_r:system_file:s0 "$MODPATH/system" 2>/dev/null
+chcon -R u:object_r:system_file:s0 "$MODPATH/product" 2>/dev/null
+chcon -R u:object_r:system_file:s0 "$MODPATH/system_ext" 2>/dev/null
 ui_print "      ✔ Permissions (0755/0644) verified"
-ui_print "      ✔ SELinux context applied (system_file)"
+ui_print "      ✔ SELinux context applied"
 ui_print " "
 
 ui_print "  ─────────────────────────────────────────"
