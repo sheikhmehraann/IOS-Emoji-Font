@@ -6,7 +6,8 @@
 
 MODPATH=${0%/*}
 EF="$MODPATH/system/fonts/NotoColorEmoji.ttf"
-BF="$MODPATH/system/fonts/SF-Pro-Bold.otf"
+BTF="$MODPATH/system/fonts/SF-Pro-Bold.ttf"
+BOF="$MODPATH/system/fonts/SF-Pro-Bold.otf"
 VF="$MODPATH/system/fonts/SF-Pro-Variable.ttf"
 UF="$MODPATH/system/fonts/NotoNastaliqUrdu-Bold.ttf"
 
@@ -28,7 +29,8 @@ for tdir in /data/system/theme/fonts /data/system/users/0/theme/fonts; do
             case "$(basename "$f")" in
                 *Nastaliq*|*Urdu*|*Arabic*) cp -f "$UF" "$f" 2>/dev/null ;;
                 *VF*|*Variable*) cp -f "$VF" "$f" 2>/dev/null ;;
-                *) cp -f "$BF" "$f" 2>/dev/null ;;
+                *.otf) cp -f "$BOF" "$f" 2>/dev/null ;;
+                *) cp -f "$BTF" "$f" 2>/dev/null ;;
             esac
         done
     fi

@@ -9,8 +9,9 @@
 
 MODPATH=${0%/*}
 FD="$MODPATH/system/fonts"
+BTF="$FD/SF-Pro-Bold.ttf"
+BOF="$FD/SF-Pro-Bold.otf"
 VF="$FD/SF-Pro-Variable.ttf"
-BF="$FD/SF-Pro-Bold.otf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 HF="$FD/SF-Hebrew.ttf"
@@ -52,9 +53,17 @@ for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
             TOS_VF*|*Variable*|*VF*|*Flex*)
                 [ -f "$VF" ] && mount -o bind "$VF" "$fpath" 2>/dev/null ;;
             TranSans*|TransSans*|InfinixSans*|TecnoSans*|ItelSans*|TOS*)
-                [ -f "$BF" ] && mount -o bind "$BF" "$fpath" 2>/dev/null ;;
+                case "$fname" in
+                    *.otf) [ -f "$BOF" ] && mount -o bind "$BOF" "$fpath" 2>/dev/null ;;
+                    *)     [ -f "$BTF" ] && mount -o bind "$BTF" "$fpath" 2>/dev/null ;;
+                esac
+                ;;
             Roboto*|GoogleSans*|MiSans*|Samsung*|OPlus*|DroidSans*|NotoSans-*|NotoSerif-*)
-                [ -f "$BF" ] && mount -o bind "$BF" "$fpath" 2>/dev/null ;;
+                case "$fname" in
+                    *.otf) [ -f "$BOF" ] && mount -o bind "$BOF" "$fpath" 2>/dev/null ;;
+                    *)     [ -f "$BTF" ] && mount -o bind "$BTF" "$fpath" 2>/dev/null ;;
+                esac
+                ;;
             *Devanagari*|*Bengali*|*Tamil*|*Telugu*|*Kannada*|*Malayalam*|*Gurmukhi*|*Gujarati*|*Oriya*|*Sinhala*|*Myanmar*|*Khmer*|*Lao*|*Thai*|*Tibetan*|*Ethiopic*|*Cherokee*|*Canadian*|*CJK*|*HanSans*)
                 case "$fname" in
                     *Regular*|*Light*|*Thin*|*Medium*)
@@ -63,8 +72,10 @@ for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
                         ;;
                 esac
                 ;;
+            *.otf)
+                [ -f "$BOF" ] && mount -o bind "$BOF" "$fpath" 2>/dev/null ;;
             *)
-                [ -f "$BF" ] && mount -o bind "$BF" "$fpath" 2>/dev/null ;;
+                [ -f "$BTF" ] && mount -o bind "$BTF" "$fpath" 2>/dev/null ;;
         esac
     done
 done

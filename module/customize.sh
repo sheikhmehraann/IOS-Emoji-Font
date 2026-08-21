@@ -35,8 +35,9 @@ if [ -n "$ZIPFILE" ] && [ -f "$ZIPFILE" ]; then
 fi
 
 FD="$MODPATH/system/fonts"
+BTF="$FD/SF-Pro-Bold.ttf"
+BOF="$FD/SF-Pro-Bold.otf"
 VF="$FD/SF-Pro-Variable.ttf"
-BF="$FD/SF-Pro-Bold.otf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 HF="$FD/SF-Hebrew.ttf"
@@ -65,9 +66,9 @@ place() {
     cp -f "$src" "$MODPATH/vendor/fonts/$name" 2>/dev/null
 }
 
-ui_print "  [+] Step 1/5: Deploying Variable Fonts (TOS_VF, Roboto VF, GoogleSansFlex)..."
+ui_print "  [+] Step 1/5: Deploying Rich Apple Bold Variable Fonts (TOS_VF, Roboto VF, etc.)..."
 for f in \
-    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf \
+    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf TOS_VF.otf \
     Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf \
     RobotoFlex-Regular.ttf \
     GoogleSansFlex-Regular.ttf \
@@ -79,7 +80,8 @@ done
 ui_print "      ✔ Variable fonts deployed across all partitions"
 ui_print " "
 
-ui_print "  [+] Step 2/5: Deploying TranSans & UI Fonts (Transsion, Roboto, Google, Samsung, etc.)..."
+ui_print "  [+] Step 2/5: Deploying Rich Apple Bold over TranSans & All UI Fonts..."
+# Every conceivable TranSans, TransSans, Infinix, Tecno, Itel, Roboto, Google, Samsung target
 for f in \
     TranSans.ttf TranSans-Regular.ttf TranSans-Bold.ttf TranSans-Medium.ttf \
     TranSans-Italic.ttf TranSans-BoldItalic.ttf TranSans-Light.ttf TranSans-LightItalic.ttf \
@@ -88,10 +90,11 @@ for f in \
     TranSans_BoldItalic.ttf TranSans_Light.ttf TranSans_Thin.ttf TranSans_Black.ttf \
     TranSans_SC.ttf TranSans_TC.ttf TranSans_Thai.ttf TranSans_Myanmar.ttf \
     TranSansShell.ttf TranSansSCShell.ttf \
+    TranSans.otf TranSans-Regular.otf TranSans-Bold.otf TranSans-Medium.otf \
     TransSans.ttf TransSans-Regular.ttf TransSans-Bold.ttf TransSans-Medium.ttf TransSans-Italic.ttf \
     TransSans_Regular.ttf TransSans_Bold.ttf TransSans_Medium.ttf TransSans_Italic.ttf \
     TransSans_SC.ttf TransSans_TC.ttf TransSans_Thai.ttf TransSans_Myanmar.ttf \
-    TOS.ttf \
+    TOS.ttf TOS-Regular.ttf TOS-Bold.ttf \
     InfinixSans.ttf InfinixSans-Regular.ttf InfinixSans-Bold.ttf InfinixSans-Medium.ttf \
     TecnoSans.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf TecnoSans-Medium.ttf \
     ItelSans.ttf ItelSans-Regular.ttf ItelSans-Bold.ttf \
@@ -125,9 +128,12 @@ for f in \
     CutiveMono.ttf ComingSoon.ttf DancingScript-Regular.ttf DancingScript-Bold.ttf \
     CarroisGothicSC-Regular.ttf
 do
-    place "$BF" "$f"
+    case "$f" in
+        *.otf) place "$BOF" "$f" ;;
+        *)     place "$BTF" "$f" ;;
+    esac
 done
-ui_print "      ✔ TranSans and UI fonts deployed across all partitions"
+ui_print "      ✔ TranSans & UI fonts deployed across all partitions"
 ui_print " "
 
 ui_print "  [+] Step 3/5: Deploying Noto Nastaliq Urdu Bold & Multilingual Fonts..."
@@ -170,8 +176,9 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /system
             *Armenian*|*armenian*)                place "$AMF" "$fname" ;;
             *Georgian*|*georgian*)                place "$GF"  "$fname" ;;
             TOS_VF*|*Variable*|*VF*|*Flex*)       place "$VF"  "$fname" ;;
-            TranSans*|TransSans*|Infinix*|Tecno*|Itel*) place "$BF" "$fname" ;;
-            *)                                    place "$BF"  "$fname" ;;
+            TranSans*|TransSans*|Infinix*|Tecno*|Itel*) place "$BTF" "$fname" ;;
+            *.otf)                                place "$BOF" "$fname" ;;
+            *)                                    place "$BTF" "$fname" ;;
         esac
         SCAN_COUNT=$((SCAN_COUNT + 1))
     done

@@ -34,7 +34,7 @@ def write_lf(filepath, content):
     with open(filepath, "wb") as f:
         f.write(content.replace("\r\n", "\n").encode("utf-8"))
 
-def patch_variable_font(in_path, out_path, weight=800.0):
+def patch_variable_font(in_path, out_path, weight=850.0):
     with open(in_path, "rb") as f:
         data = bytearray(f.read())
 
@@ -64,7 +64,7 @@ def patch_variable_font(in_path, out_path, weight=800.0):
 
     if "OS/2" in tables:
         off = tables["OS/2"][0]
-        struct.pack_into(">H", data, off + 4, int(min(weight, 800)))
+        struct.pack_into(">H", data, off + 4, int(min(weight, 850)))
         fs = struct.unpack(">H", data[off + 62:off + 64])[0]
         struct.pack_into(">H", data, off + 62, fs | 0x0020)
 
@@ -106,14 +106,15 @@ def copy_assets():
         os.path.join(sysfonts, "NotoColorEmoji.ttf"),
     )
 
-    # SF Pro Variable (wght axis locked to 800)
+    # SF Pro TrueType Bold (Rich Heavy Bold 850)
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro.ttf"),
-        os.path.join(sysfonts, "SF-Pro-Variable.ttf"),
-        800.0,
+        os.path.join(sysfonts, "SF-Pro-Bold.ttf"),
+        850.0,
     )
+    shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Variable.ttf"))
 
-    # SF Pro Display Heavy (static, real weight 800)
+    # SF Pro Display Heavy (static OTF, real weight 800)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro-Display-Heavy.otf"),
         os.path.join(sysfonts, "SF-Pro-Bold.otf"),
@@ -147,25 +148,25 @@ def copy_assets():
         700.0,
     )
 
-    # SF Hebrew Bold
+    # SF Hebrew Bold (850)
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Hebrew.ttf"),
         os.path.join(sysfonts, "SF-Hebrew.ttf"),
-        800.0,
+        850.0,
     )
 
-    # SF Armenian Bold
+    # SF Armenian Bold (850)
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Armenian.ttf"),
         os.path.join(sysfonts, "SF-Armenian.ttf"),
-        800.0,
+        850.0,
     )
 
-    # SF Georgian Bold
+    # SF Georgian Bold (850)
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Georgian.ttf"),
         os.path.join(sysfonts, "SF-Georgian.ttf"),
-        800.0,
+        850.0,
     )
 
 def write_module_scripts():
@@ -175,7 +176,7 @@ name= iOS Bold Font & iOS 26.4 Emoji
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Apple SF Pro Bold (800) + Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. Complete coverage for TranSans, TOS_VF, Roboto, and all languages across all partitions.
+description= Rich Apple SF Pro Bold (850) + Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. Complete coverage for TranSans, TOS_VF, Roboto, and all languages across all apps and partitions.
 """)
 
     write_lf(os.path.join(MODULE_DIR, "customize.sh"), r"""#!/system/bin/sh
@@ -215,8 +216,9 @@ if [ -n "$ZIPFILE" ] && [ -f "$ZIPFILE" ]; then
 fi
 
 FD="$MODPATH/system/fonts"
+BTF="$FD/SF-Pro-Bold.ttf"
+BOF="$FD/SF-Pro-Bold.otf"
 VF="$FD/SF-Pro-Variable.ttf"
-BF="$FD/SF-Pro-Bold.otf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 HF="$FD/SF-Hebrew.ttf"
@@ -245,9 +247,9 @@ place() {
     cp -f "$src" "$MODPATH/vendor/fonts/$name" 2>/dev/null
 }
 
-ui_print "  [+] Step 1/5: Deploying Variable Fonts (TOS_VF, Roboto VF, GoogleSansFlex)..."
+ui_print "  [+] Step 1/5: Deploying Rich Apple Bold Variable Fonts (TOS_VF, Roboto VF, etc.)..."
 for f in \
-    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf \
+    TOS_VF.ttf TOS_VF_SC.ttf TOS_VF_TC.ttf TOS_VF_Thai.ttf TOS_VF_Myanmar.ttf TOS_VF.otf \
     Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf \
     RobotoFlex-Regular.ttf \
     GoogleSansFlex-Regular.ttf \
@@ -259,7 +261,8 @@ done
 ui_print "      ✔ Variable fonts deployed across all partitions"
 ui_print " "
 
-ui_print "  [+] Step 2/5: Deploying TranSans & UI Fonts (Transsion, Roboto, Google, Samsung, etc.)..."
+ui_print "  [+] Step 2/5: Deploying Rich Apple Bold over TranSans & All UI Fonts..."
+# Every conceivable TranSans, TransSans, Infinix, Tecno, Itel, Roboto, Google, Samsung target
 for f in \
     TranSans.ttf TranSans-Regular.ttf TranSans-Bold.ttf TranSans-Medium.ttf \
     TranSans-Italic.ttf TranSans-BoldItalic.ttf TranSans-Light.ttf TranSans-LightItalic.ttf \
@@ -268,10 +271,11 @@ for f in \
     TranSans_BoldItalic.ttf TranSans_Light.ttf TranSans_Thin.ttf TranSans_Black.ttf \
     TranSans_SC.ttf TranSans_TC.ttf TranSans_Thai.ttf TranSans_Myanmar.ttf \
     TranSansShell.ttf TranSansSCShell.ttf \
+    TranSans.otf TranSans-Regular.otf TranSans-Bold.otf TranSans-Medium.otf \
     TransSans.ttf TransSans-Regular.ttf TransSans-Bold.ttf TransSans-Medium.ttf TransSans-Italic.ttf \
     TransSans_Regular.ttf TransSans_Bold.ttf TransSans_Medium.ttf TransSans_Italic.ttf \
     TransSans_SC.ttf TransSans_TC.ttf TransSans_Thai.ttf TransSans_Myanmar.ttf \
-    TOS.ttf \
+    TOS.ttf TOS-Regular.ttf TOS-Bold.ttf \
     InfinixSans.ttf InfinixSans-Regular.ttf InfinixSans-Bold.ttf InfinixSans-Medium.ttf \
     TecnoSans.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf TecnoSans-Medium.ttf \
     ItelSans.ttf ItelSans-Regular.ttf ItelSans-Bold.ttf \
@@ -305,9 +309,12 @@ for f in \
     CutiveMono.ttf ComingSoon.ttf DancingScript-Regular.ttf DancingScript-Bold.ttf \
     CarroisGothicSC-Regular.ttf
 do
-    place "$BF" "$f"
+    case "$f" in
+        *.otf) place "$BOF" "$f" ;;
+        *)     place "$BTF" "$f" ;;
+    esac
 done
-ui_print "      ✔ TranSans and UI fonts deployed across all partitions"
+ui_print "      ✔ TranSans & UI fonts deployed across all partitions"
 ui_print " "
 
 ui_print "  [+] Step 3/5: Deploying Noto Nastaliq Urdu Bold & Multilingual Fonts..."
@@ -350,8 +357,9 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /system
             *Armenian*|*armenian*)                place "$AMF" "$fname" ;;
             *Georgian*|*georgian*)                place "$GF"  "$fname" ;;
             TOS_VF*|*Variable*|*VF*|*Flex*)       place "$VF"  "$fname" ;;
-            TranSans*|TransSans*|Infinix*|Tecno*|Itel*) place "$BF" "$fname" ;;
-            *)                                    place "$BF"  "$fname" ;;
+            TranSans*|TransSans*|Infinix*|Tecno*|Itel*) place "$BTF" "$fname" ;;
+            *.otf)                                place "$BOF" "$fname" ;;
+            *)                                    place "$BTF" "$fname" ;;
         esac
         SCAN_COUNT=$((SCAN_COUNT + 1))
     done
@@ -428,8 +436,9 @@ ui_print " "
 
 MODPATH=${0%/*}
 FD="$MODPATH/system/fonts"
+BTF="$FD/SF-Pro-Bold.ttf"
+BOF="$FD/SF-Pro-Bold.otf"
 VF="$FD/SF-Pro-Variable.ttf"
-BF="$FD/SF-Pro-Bold.otf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 HF="$FD/SF-Hebrew.ttf"
@@ -471,9 +480,17 @@ for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
             TOS_VF*|*Variable*|*VF*|*Flex*)
                 [ -f "$VF" ] && mount -o bind "$VF" "$fpath" 2>/dev/null ;;
             TranSans*|TransSans*|InfinixSans*|TecnoSans*|ItelSans*|TOS*)
-                [ -f "$BF" ] && mount -o bind "$BF" "$fpath" 2>/dev/null ;;
+                case "$fname" in
+                    *.otf) [ -f "$BOF" ] && mount -o bind "$BOF" "$fpath" 2>/dev/null ;;
+                    *)     [ -f "$BTF" ] && mount -o bind "$BTF" "$fpath" 2>/dev/null ;;
+                esac
+                ;;
             Roboto*|GoogleSans*|MiSans*|Samsung*|OPlus*|DroidSans*|NotoSans-*|NotoSerif-*)
-                [ -f "$BF" ] && mount -o bind "$BF" "$fpath" 2>/dev/null ;;
+                case "$fname" in
+                    *.otf) [ -f "$BOF" ] && mount -o bind "$BOF" "$fpath" 2>/dev/null ;;
+                    *)     [ -f "$BTF" ] && mount -o bind "$BTF" "$fpath" 2>/dev/null ;;
+                esac
+                ;;
             *Devanagari*|*Bengali*|*Tamil*|*Telugu*|*Kannada*|*Malayalam*|*Gurmukhi*|*Gujarati*|*Oriya*|*Sinhala*|*Myanmar*|*Khmer*|*Lao*|*Thai*|*Tibetan*|*Ethiopic*|*Cherokee*|*Canadian*|*CJK*|*HanSans*)
                 case "$fname" in
                     *Regular*|*Light*|*Thin*|*Medium*)
@@ -482,8 +499,10 @@ for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
                         ;;
                 esac
                 ;;
+            *.otf)
+                [ -f "$BOF" ] && mount -o bind "$BOF" "$fpath" 2>/dev/null ;;
             *)
-                [ -f "$BF" ] && mount -o bind "$BF" "$fpath" 2>/dev/null ;;
+                [ -f "$BTF" ] && mount -o bind "$BTF" "$fpath" 2>/dev/null ;;
         esac
     done
 done
@@ -497,7 +516,8 @@ done
 
 MODPATH=${0%/*}
 EF="$MODPATH/system/fonts/NotoColorEmoji.ttf"
-BF="$MODPATH/system/fonts/SF-Pro-Bold.otf"
+BTF="$MODPATH/system/fonts/SF-Pro-Bold.ttf"
+BOF="$MODPATH/system/fonts/SF-Pro-Bold.otf"
 VF="$MODPATH/system/fonts/SF-Pro-Variable.ttf"
 UF="$MODPATH/system/fonts/NotoNastaliqUrdu-Bold.ttf"
 
@@ -519,7 +539,8 @@ for tdir in /data/system/theme/fonts /data/system/users/0/theme/fonts; do
             case "$(basename "$f")" in
                 *Nastaliq*|*Urdu*|*Arabic*) cp -f "$UF" "$f" 2>/dev/null ;;
                 *VF*|*Variable*) cp -f "$VF" "$f" 2>/dev/null ;;
-                *) cp -f "$BF" "$f" 2>/dev/null ;;
+                *.otf) cp -f "$BOF" "$f" 2>/dev/null ;;
+                *) cp -f "$BTF" "$f" 2>/dev/null ;;
             esac
         done
     fi
