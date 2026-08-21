@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<installer-gui-script minSpecVersion="1">
+    <options rootVolumeOnly="true" customize="never" hostArchitectures="i386,x86_64,arm64"/>
+    <title>SU_TITLE</title>
+    <script/>
+    <domains enable_localSystem="true" enable_anywhere="true" enable_currentUserHome="true"/>
+    <license file="License.rtf"/>
+    <welcome file="welcome.html"/>
+    <choices-outline>
+        <line choice="manual"/>
+    </choices-outline>
+    <choice id="manual" title="SU_TITLE">
+        <pkg-ref id="SFArabicFonts" auth="Root" packageIdentifier="com.apple.pkg.SFArabicFonts">#SFArabicFonts.pkg</pkg-ref>
+    </choice>
+    <script/>
+    <conclusion file="conclusion.html"/>
+    <pkg-ref id="SFArabicFonts" installKBytes="1782" version="6.0.1.1726709071"/>
+</installer-gui-script>

@@ -42,6 +42,10 @@ VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
 HEAVY_FONT="$FONT_DIR/SF-Pro-Heavy.otf"
 BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
 ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
+ARABIC_FONT="$FONT_DIR/SF-Arabic.ttf"
+HEBREW_FONT="$FONT_DIR/SF-Hebrew.ttf"
+ARMENIAN_FONT="$FONT_DIR/SF-Armenian.ttf"
+GEORGIAN_FONT="$FONT_DIR/SF-Georgian.ttf"
 FONT_EMOJI="NotoColorEmoji.ttf"
 
 package_installed() {
@@ -89,7 +93,7 @@ if [ -n "$ZIPFILE" ] && [ -f "$ZIPFILE" ]; then
     unzip -o "$ZIPFILE" 'system/*' -d "$MODPATH" >/dev/null 2>&1
 fi
 
-# Create target directories for ALL partition mount types
+# Create target directories for ALL partition mount types (root & nested)
 mkdir -p "$MODPATH/system/fonts" 2>/dev/null
 mkdir -p "$MODPATH/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system_ext/fonts" 2>/dev/null
@@ -99,7 +103,7 @@ mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/vendor/fonts" 2>/dev/null
 
-ui_print "  [+] Step 1/4: Injecting Apple SF Pro Heavy & Variable Typography..."
+ui_print "  [+] Step 1/4: Injecting Apple SF Pro Heavy & Multilingual Bold Typography..."
 
 # 1. Variable Font Targets (Android 12-16 Variable Font Engines)
 var_targets="
@@ -128,7 +132,41 @@ for f in $clock_targets; do
     cp -f "$ROUND_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
 done
 
-# 3. Heavy / Bold UI Font Targets (Apple SF Pro Heavy)
+# 3. Multilingual Scripts (SF Arabic, SF Hebrew, SF Armenian, SF Georgian)
+arabic_targets="
+NotoSansArabic-Regular.ttf NotoSansArabic-Bold.ttf NotoSansArabic-Medium.ttf
+NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf NotoNaskhArabicUI-Regular.ttf NotoNaskhArabicUI-Bold.ttf
+"
+for f in $arabic_targets; do
+    cp -f "$ARABIC_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$ARABIC_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$ARABIC_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+    cp -f "$ARABIC_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
+done
+
+hebrew_targets="NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf NotoSansHebrew-Medium.ttf"
+for f in $hebrew_targets; do
+    cp -f "$HEBREW_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$HEBREW_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$HEBREW_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+    cp -f "$HEBREW_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
+done
+
+armenian_targets="NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf NotoSansArmenian-Medium.ttf"
+for f in $armenian_targets; do
+    cp -f "$ARMENIAN_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$ARMENIAN_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$ARMENIAN_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+done
+
+georgian_targets="NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf NotoSansGeorgian-Medium.ttf"
+for f in $georgian_targets; do
+    cp -f "$GEORGIAN_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$GEORGIAN_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$GEORGIAN_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+done
+
+# 4. Heavy / Bold UI Font Targets (Apple SF Pro Heavy)
 heavy_targets="
 Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf
 RobotoStatic-Regular.ttf RobotoStatic-Bold.ttf RobotoStatic-Medium.ttf RobotoStatic-Italic.ttf RobotoStatic-BoldItalic.ttf RobotoStatic-Light.ttf RobotoStatic-Thin.ttf RobotoStatic-Black.ttf
@@ -152,7 +190,7 @@ for f in $heavy_targets; do
     cp -f "$HEAVY_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
 done
 
-# 4. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI font
+# 5. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI font
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     if [ -d "$pdir" ]; then
         sub="${pdir#/}"
@@ -165,11 +203,27 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
                     cp -f "$ROUND_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$ROUND_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
+                *Arabic*|*arabic*)
+                    cp -f "$ARABIC_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$ARABIC_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                    ;;
+                *Hebrew*|*hebrew*)
+                    cp -f "$HEBREW_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$HEBREW_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                    ;;
+                *Armenian*|*armenian*)
+                    cp -f "$ARMENIAN_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$ARMENIAN_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                    ;;
+                *Georgian*|*georgian*)
+                    cp -f "$GEORGIAN_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$GEORGIAN_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                    ;;
                 *Variable*|*VF*|*Flex*)
                     cp -f "$VAR_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$VAR_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
-                *Symbol*|*symbol*|*NotoSansHebrew*|*NotoSansArabic*|*NotoSansThai*|*NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansCJK*|*NotoSerifCJK*) ;;
+                *Symbol*|*symbol*|*NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansCJK*|*NotoSerifCJK*) ;;
                 *)
                     cp -f "$HEAVY_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
                     cp -f "$HEAVY_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
@@ -179,7 +233,7 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     fi
 done
 
-ui_print "      ✔ Universal coverage generated across /system, /product, and /system_ext"
+ui_print "      ✔ Multilingual & multi-partition coverage generated successfully"
 ui_print " "
 
 ui_print "  [+] Step 2/4: Deploying iOS 26.4 Apple Color Emoji..."

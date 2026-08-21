@@ -12,6 +12,10 @@ VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
 HEAVY_FONT="$FONT_DIR/SF-Pro-Heavy.otf"
 BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
 ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
+ARABIC_FONT="$FONT_DIR/SF-Arabic.ttf"
+HEBREW_FONT="$FONT_DIR/SF-Hebrew.ttf"
+ARMENIAN_FONT="$FONT_DIR/SF-Armenian.ttf"
+GEORGIAN_FONT="$FONT_DIR/SF-Georgian.ttf"
 BASE_EMOJI="$FONT_DIR/NotoColorEmoji.ttf"
 
 # Clean dynamic Android 12-16 FontManager caches before system_server starts
@@ -41,14 +45,32 @@ for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /
                         mount -o bind "$ROUND_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
+                *Arabic*|*arabic*)
+                    if [ -f "$ARABIC_FONT" ]; then
+                        mount -o bind "$ARABIC_FONT" "$fpath" 2>/dev/null
+                    fi
+                    ;;
+                *Hebrew*|*hebrew*)
+                    if [ -f "$HEBREW_FONT" ]; then
+                        mount -o bind "$HEBREW_FONT" "$fpath" 2>/dev/null
+                    fi
+                    ;;
+                *Armenian*|*armenian*)
+                    if [ -f "$ARMENIAN_FONT" ]; then
+                        mount -o bind "$ARMENIAN_FONT" "$fpath" 2>/dev/null
+                    fi
+                    ;;
+                *Georgian*|*georgian*)
+                    if [ -f "$GEORGIAN_FONT" ]; then
+                        mount -o bind "$GEORGIAN_FONT" "$fpath" 2>/dev/null
+                    fi
+                    ;;
                 *Variable*|*VF*|*Flex*)
                     if [ -f "$VAR_FONT" ]; then
                         mount -o bind "$VAR_FONT" "$fpath" 2>/dev/null
-                    elif [ -f "$HEAVY_FONT" ]; then
-                        mount -o bind "$HEAVY_FONT" "$fpath" 2>/dev/null
                     fi
                     ;;
-                *Symbol*|*symbol*|*NotoSansHebrew*|*NotoSansArabic*|*NotoSansThai*|*NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansCJK*|*NotoSerifCJK*) ;;
+                *Symbol*|*symbol*|*NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansThai*|*NotoSansCJK*|*NotoSerifCJK*) ;;
                 *)
                     if [ -f "$MODPATH/system/fonts/$fname" ]; then
                         mount -o bind "$MODPATH/system/fonts/$fname" "$fpath" 2>/dev/null
