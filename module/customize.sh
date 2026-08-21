@@ -86,30 +86,53 @@ if [ -n "$ZIPFILE" ] && [ -f "$ZIPFILE" ]; then
     unzip -o "$ZIPFILE" 'system/*' -d "$MODPATH" >/dev/null 2>&1
 fi
 
-ui_print "  [+] Step 1/4: Expanding SF Pro Heavy Font Targets..."
-
-# Expand system fonts
-sys_targets="Roboto-Bold.ttf Roboto-Medium.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf RobotoStatic-Regular.ttf RobotoStatic-Bold.ttf RobotoStatic-Medium.ttf RobotoStatic-Italic.ttf RobotoStatic-BoldItalic.ttf Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf RobotoFlex-Regular.ttf TranSansShell.ttf TranSansSCShell.ttf"
-
-for f in $sys_targets; do
-    cp -f "$BASE_FONT" "$FONT_DIR/$f" 2>/dev/null
-done
-
-# Expand product fonts
 mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
-prod_targets="TOS_VF.ttf TranSans_Italic.ttf TranSans_SC.ttf TransSans_Italic.ttf TransSans_SC.ttf TransSans_Thai.ttf TransSans-Regular.ttf TransSans-Bold.ttf TransSans-Medium.ttf Roboto-Regular.ttf Roboto-VariableFont_wdth,wght.ttf"
-for f in $prod_targets; do
-    cp -f "$BASE_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
-done
-
-# Expand system_ext fonts
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
-ext_targets="TOS_VF.ttf TranSansShell.ttf Roboto-Regular.ttf Roboto-VariableFont_wdth,wght.ttf"
-for f in $ext_targets; do
+
+ui_print "  [+] Step 1/4: Expanding SF Pro Heavy to ALL System & UI Targets..."
+
+# 1. Baseline Common Font Targets across AOSP, Pixel, Samsung, Xiaomi, OnePlus, Transsion
+common_targets="
+Roboto-Bold.ttf Roboto-Medium.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf
+RobotoStatic-Regular.ttf RobotoStatic-Bold.ttf RobotoStatic-Medium.ttf RobotoStatic-Italic.ttf RobotoStatic-BoldItalic.ttf RobotoStatic-Light.ttf RobotoStatic-Thin.ttf RobotoStatic-Black.ttf
+Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf RobotoFlex-Regular.ttf
+RobotoCondensed-Regular.ttf RobotoCondensed-Bold.ttf RobotoCondensed-Italic.ttf RobotoCondensed-BoldItalic.ttf RobotoCondensed-Light.ttf RobotoCondensed-LightItalic.ttf RobotoCondensed-Medium.ttf RobotoCondensed-MediumItalic.ttf
+GoogleSans-Regular.ttf GoogleSans-Medium.ttf GoogleSans-Bold.ttf GoogleSans-Italic.ttf GoogleSans-BoldItalic.ttf GoogleSans-MediumItalic.ttf GoogleSansFlex-Regular.ttf GoogleSansClock-Regular.ttf
+GoogleSansText-Regular.ttf GoogleSansText-Medium.ttf GoogleSansText-Bold.ttf GoogleSansText-Italic.ttf GoogleSansText-BoldItalic.ttf GoogleSansText-MediumItalic.ttf
+GS-Regular.ttf GS-Medium.ttf GS-Bold.ttf GS-Italic.ttf AndroidClock.ttf
+TranSansShell.ttf TranSansSCShell.ttf TranSans_Regular.ttf TranSans_Medium.ttf TranSans_Bold.ttf TranSans_Italic.ttf TranSans_SC.ttf TranSans_TC.ttf
+TOS_VF.ttf TOS_VF_SC.ttf TransSans-Regular.ttf TransSans-Medium.ttf TransSans-Bold.ttf TransSans_Italic.ttf TransSans_SC.ttf TransSans_Thai.ttf
+InfinixSans-Regular.ttf InfinixSans-Bold.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf
+SECRobotoLight-Regular.ttf SECRobotoLight-Bold.ttf SECRoboto-Regular.ttf SECRoboto-Bold.ttf SamsungOne-400.ttf SamsungOne-500.ttf SamsungOne-600.ttf SamsungOne-700.ttf SamsungSans-Regular.ttf SamsungSans-Bold.ttf
+MiSans-Regular.ttf MiSans-Medium.ttf MiSans-Demibold.ttf MiSans-Bold.ttf MiSans-Heavy.ttf MiSans-Light.ttf MiSans-Thin.ttf MiSans-Normal.ttf MiSans-Semibold.ttf MiSansVF.ttf MiSans_VF.ttf MiSansLatin-Regular.ttf MiSansLatin-Bold.ttf Miui-Regular.ttf Miui-Bold.ttf
+OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.ttf OPlusSans2.0-VF.ttf OPlusSans3.0-VF.ttf SysSans-En-Regular.ttf OnePlusSans-Regular.ttf OnePlusSans-Bold.ttf
+"
+
+for f in $common_targets; do
+    cp -f "$BASE_FONT" "$FONT_DIR/$f" 2>/dev/null
+    cp -f "$BASE_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
     cp -f "$BASE_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
 done
 
-ui_print "      ✔ Generated 35+ system, product, and system_ext font targets"
+# 2. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI font
+for pdir in /system/fonts /product/fonts /system/product/fonts /system_ext/fonts /system/system_ext/fonts /vendor/fonts; do
+    if [ -d "$pdir" ]; then
+        for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
+            [ -f "$fpath" ] || continue
+            fname=$(basename "$fpath")
+            case "$fname" in
+                *Emoji*|*emoji*|*Symbol*|*symbol*|*Clock*|*clock*|*NotoSansHebrew*|*NotoSansArabic*|*NotoSansThai*) ;;
+                *)
+                    cp -f "$BASE_FONT" "$FONT_DIR/$fname" 2>/dev/null
+                    cp -f "$BASE_FONT" "$MODPATH/system/product/fonts/$fname" 2>/dev/null
+                    cp -f "$BASE_FONT" "$MODPATH/system/system_ext/fonts/$fname" 2>/dev/null
+                    ;;
+            esac
+        done
+    fi
+done
+
+ui_print "      ✔ Universal coverage generated for all ROM UI fonts & weights"
 ui_print " "
 
 ui_print "  [+] Step 2/4: Deploying iOS 26.4 Apple Color Emoji..."

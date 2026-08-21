@@ -7,8 +7,10 @@
 ##########################################################################################
 
 MODPATH=${0%/*}
+BASE_FONT="$MODPATH/system/fonts/Roboto-Regular.ttf"
+BASE_EMOJI="$MODPATH/system/fonts/NotoColorEmoji.ttf"
 
-# Clean dynamic Android 12-16 FontManager caches before system_server starts
+# 1. Clean dynamic Android 12-16 FontManager caches before system_server starts
 rm -rf /data/fonts/* 2>/dev/null
 rm -rf /data/system/font_fallback.xml 2>/dev/null
 rm -rf /data/fonts/run_metadata.xml 2>/dev/null
@@ -18,52 +20,31 @@ rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 mkdir -p /data/fonts 2>/dev/null
 chmod 755 /data/fonts 2>/dev/null
 
-# Direct bind-mount fallback
-if [ -f "$MODPATH/system/fonts/NotoColorEmoji.ttf" ]; then
-    for emoji_target in /system/fonts/NotoColorEmoji.ttf /system/fonts/SamsungColorEmoji.ttf /system/fonts/ColorUniEmoji.ttf; do
-        if [ -f "$emoji_target" ]; then
-            mount -o bind "$MODPATH/system/fonts/NotoColorEmoji.ttf" "$emoji_target" 2>/dev/null
-        fi
-    done
-fi
-
-if [ -f "$MODPATH/system/fonts/Roboto-Regular.ttf" ]; then
-    for font_target in \
-        /system/fonts/Roboto-VariableFont_wdth,wght.ttf \
-        /system/fonts/Roboto-Italic-VariableFont_wdth,wght.ttf \
-        /system/fonts/RobotoFlex-Regular.ttf \
-        /system/fonts/Roboto-Regular.ttf \
-        /system/fonts/Roboto-Bold.ttf \
-        /system/fonts/Roboto-Medium.ttf \
-        /system/fonts/RobotoStatic-Regular.ttf \
-        /system/fonts/TranSansShell.ttf \
-        /system/fonts/TranSansSCShell.ttf; do
-        if [ -f "$font_target" ]; then
-            mount -o bind "$MODPATH/system/fonts/Roboto-Regular.ttf" "$font_target" 2>/dev/null
-        fi
-    done
-
-    for prod_target in \
-        /product/fonts/TOS_VF.ttf \
-        /system/product/fonts/TOS_VF.ttf \
-        /product/fonts/TranSans_SC.ttf \
-        /system/product/fonts/TranSans_SC.ttf \
-        /product/fonts/TransSans_Thai.ttf \
-        /system/product/fonts/TransSans_Thai.ttf; do
-        if [ -f "$prod_target" ] && [ -f "$MODPATH/system/product/fonts/TOS_VF.ttf" ]; then
-            mount -o bind "$MODPATH/system/product/fonts/TOS_VF.ttf" "$prod_target" 2>/dev/null
-        elif [ -f "$prod_target" ]; then
-            mount -o bind "$MODPATH/system/fonts/Roboto-Regular.ttf" "$prod_target" 2>/dev/null
-        fi
-    done
-
-    for ext_target in \
-        /system_ext/fonts/TOS_VF.ttf \
-        /system/system_ext/fonts/TOS_VF.ttf \
-        /system_ext/fonts/TranSansShell.ttf \
-        /system/system_ext/fonts/TranSansShell.ttf; do
-        if [ -f "$ext_target" ]; then
-            mount -o bind "$MODPATH/system/fonts/Roboto-Regular.ttf" "$ext_target" 2>/dev/null
+# 2. Universal Dynamic Bind-Mount for ALL partitions and font files
+if [ -f "$BASE_FONT" ]; then
+    for target_dir in /system/fonts /product/fonts /system_ext/fonts /system/product/fonts /system/system_ext/fonts /vendor/fonts; do
+        if [ -d "$target_dir" ]; then
+            for fpath in "$target_dir"/*.ttf "$target_dir"/*.otf; do
+                [ -f "$fpath" ] || continue
+                fname=$(basename "$fpath")
+                case "$fname" in
+                    *Emoji*|*emoji*)
+                        if [ -f "$BASE_EMOJI" ]; then
+                            mount -o bind "$BASE_EMOJI" "$fpath" 2>/dev/null
+                        fi
+                        ;;
+                    *Symbol*|*symbol*|*Clock*|*clock*|*NotoSansHebrew*|*NotoSansArabic*|*NotoSansThai*) ;;
+                    *)
+                        if [ -f "$MODPATH/system/fonts/$fname" ]; then
+                            mount -o bind "$MODPATH/system/fonts/$fname" "$fpath" 2>/dev/null
+                        elif [ -f "$MODPATH/system/product/fonts/$fname" ]; then
+                            mount -o bind "$MODPATH/system/product/fonts/$fname" "$fpath" 2>/dev/null
+                        else
+                            mount -o bind "$BASE_FONT" "$fpath" 2>/dev/null
+                        fi
+                        ;;
+                esac
+            done
         fi
     done
 fi
