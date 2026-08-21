@@ -38,8 +38,11 @@ ui_print "      • Android : $ANDROID_VER (SDK $ANDROID_SDK)"
 ui_print " "
 
 FONT_DIR="$MODPATH/system/fonts"
+VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
+HEAVY_FONT="$FONT_DIR/SF-Pro-Heavy.otf"
+BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
+ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
 FONT_EMOJI="NotoColorEmoji.ttf"
-BASE_FONT="$FONT_DIR/Roboto-Regular.ttf"
 
 package_installed() {
     local package="$1"
@@ -96,35 +99,60 @@ mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/vendor/fonts" 2>/dev/null
 
-ui_print "  [+] Step 1/4: Expanding SF Pro Heavy to ALL Partition Targets..."
+ui_print "  [+] Step 1/4: Injecting Apple SF Pro Heavy & Variable Typography..."
 
-# 1. Baseline Common Font Targets across AOSP, Pixel, Samsung, Xiaomi, OnePlus, Transsion
-common_targets="
-Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf
-RobotoStatic-Regular.ttf RobotoStatic-Bold.ttf RobotoStatic-Medium.ttf RobotoStatic-Italic.ttf RobotoStatic-BoldItalic.ttf RobotoStatic-Light.ttf RobotoStatic-Thin.ttf RobotoStatic-Black.ttf
+# 1. Variable Font Targets (Android 12-16 Variable Font Engines)
+var_targets="
 Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf RobotoFlex-Regular.ttf
-RobotoCondensed-Regular.ttf RobotoCondensed-Bold.ttf RobotoCondensed-Italic.ttf RobotoCondensed-BoldItalic.ttf RobotoCondensed-Light.ttf RobotoCondensed-LightItalic.ttf RobotoCondensed-Medium.ttf RobotoCondensed-MediumItalic.ttf
-GoogleSans-Regular.ttf GoogleSans-Medium.ttf GoogleSans-Bold.ttf GoogleSans-Italic.ttf GoogleSans-BoldItalic.ttf GoogleSans-MediumItalic.ttf GoogleSansFlex-Regular.ttf GoogleSansClock-Regular.ttf
-GoogleSansText-Regular.ttf GoogleSansText-Medium.ttf GoogleSansText-Bold.ttf GoogleSansText-Italic.ttf GoogleSansText-BoldItalic.ttf GoogleSansText-MediumItalic.ttf
-GS-Regular.ttf GS-Medium.ttf GS-Bold.ttf GS-Italic.ttf AndroidClock.ttf
-TranSansShell.ttf TranSansSCShell.ttf TranSans_Regular.ttf TranSans_Medium.ttf TranSans_Bold.ttf TranSans_Italic.ttf TranSans_SC.ttf TranSans_TC.ttf
-TOS_VF.ttf TOS_VF_SC.ttf TransSans-Regular.ttf TransSans-Medium.ttf TransSans-Bold.ttf TransSans_Italic.ttf TransSans_SC.ttf TransSans_Thai.ttf
-InfinixSans-Regular.ttf InfinixSans-Bold.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf
-SECRobotoLight-Regular.ttf SECRobotoLight-Bold.ttf SECRoboto-Regular.ttf SECRoboto-Bold.ttf SamsungOne-400.ttf SamsungOne-500.ttf SamsungOne-600.ttf SamsungOne-700.ttf SamsungSans-Regular.ttf SamsungSans-Bold.ttf
-MiSans-Regular.ttf MiSans-Medium.ttf MiSans-Demibold.ttf MiSans-Bold.ttf MiSans-Heavy.ttf MiSans-Light.ttf MiSans-Thin.ttf MiSans-Normal.ttf MiSans-Semibold.ttf MiSansVF.ttf MiSans_VF.ttf MiSansLatin-Regular.ttf MiSansLatin-Bold.ttf Miui-Regular.ttf Miui-Bold.ttf
-OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.ttf OPlusSans2.0-VF.ttf OPlusSans3.0-VF.ttf SysSans-En-Regular.ttf OnePlusSans-Regular.ttf OnePlusSans-Bold.ttf
+TOS_VF.ttf TOS_VF_SC.ttf
+GoogleSansFlex-Regular.ttf
+MiSansVF.ttf MiSans_VF.ttf
+OPlusSans2.0-VF.ttf OPlusSans3.0-VF.ttf
 "
-
-for f in $common_targets; do
-    cp -f "$BASE_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
-    cp -f "$BASE_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
-    cp -f "$BASE_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
-    cp -f "$BASE_FONT" "$MODPATH/vendor/fonts/$f" 2>/dev/null
-    cp -f "$BASE_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
-    cp -f "$BASE_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
+for f in $var_targets; do
+    cp -f "$VAR_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$VAR_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$VAR_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+    cp -f "$VAR_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
+    cp -f "$VAR_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
 done
 
-# 2. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI font
+# 2. Clock & Lockscreen Font Targets (Apple Rounded Bold)
+clock_targets="
+AndroidClock.ttf GoogleSansClock-Regular.ttf
+"
+for f in $clock_targets; do
+    cp -f "$ROUND_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$ROUND_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$ROUND_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+    cp -f "$ROUND_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
+done
+
+# 3. Heavy / Bold UI Font Targets (Apple SF Pro Heavy)
+heavy_targets="
+Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf
+RobotoStatic-Regular.ttf RobotoStatic-Bold.ttf RobotoStatic-Medium.ttf RobotoStatic-Italic.ttf RobotoStatic-BoldItalic.ttf RobotoStatic-Light.ttf RobotoStatic-Thin.ttf RobotoStatic-Black.ttf
+RobotoCondensed-Regular.ttf RobotoCondensed-Bold.ttf RobotoCondensed-Italic.ttf RobotoCondensed-BoldItalic.ttf RobotoCondensed-Light.ttf RobotoCondensed-LightItalic.ttf RobotoCondensed-Medium.ttf RobotoCondensed-MediumItalic.ttf
+GoogleSans-Regular.ttf GoogleSans-Medium.ttf GoogleSans-Bold.ttf GoogleSans-Italic.ttf GoogleSans-BoldItalic.ttf GoogleSans-MediumItalic.ttf
+GoogleSansText-Regular.ttf GoogleSansText-Medium.ttf GoogleSansText-Bold.ttf GoogleSansText-Italic.ttf GoogleSansText-BoldItalic.ttf GoogleSansText-MediumItalic.ttf
+GS-Regular.ttf GS-Medium.ttf GS-Bold.ttf GS-Italic.ttf
+TranSansShell.ttf TranSansSCShell.ttf TranSans_Regular.ttf TranSans_Medium.ttf TranSans_Bold.ttf TranSans_Italic.ttf TranSans_SC.ttf TranSans_TC.ttf
+TransSans-Regular.ttf TransSans-Medium.ttf TransSans-Bold.ttf TransSans_Italic.ttf TransSans_SC.ttf TransSans_Thai.ttf
+InfinixSans-Regular.ttf InfinixSans-Bold.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf
+SECRobotoLight-Regular.ttf SECRobotoLight-Bold.ttf SECRoboto-Regular.ttf SECRoboto-Bold.ttf SamsungOne-400.ttf SamsungOne-500.ttf SamsungOne-600.ttf SamsungOne-700.ttf SamsungSans-Regular.ttf SamsungSans-Bold.ttf
+MiSans-Regular.ttf MiSans-Medium.ttf MiSans-Demibold.ttf MiSans-Bold.ttf MiSans-Heavy.ttf MiSans-Light.ttf MiSans-Thin.ttf MiSans-Normal.ttf MiSans-Semibold.ttf MiSansLatin-Regular.ttf MiSansLatin-Bold.ttf Miui-Regular.ttf Miui-Bold.ttf
+OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.ttf SysSans-En-Regular.ttf OnePlusSans-Regular.ttf OnePlusSans-Bold.ttf
+"
+for f in $heavy_targets; do
+    cp -f "$HEAVY_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$HEAVY_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$HEAVY_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+    cp -f "$HEAVY_FONT" "$MODPATH/vendor/fonts/$f" 2>/dev/null
+    cp -f "$HEAVY_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
+    cp -f "$HEAVY_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
+done
+
+# 4. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI font
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     if [ -d "$pdir" ]; then
         sub="${pdir#/}"
@@ -132,10 +160,19 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
             [ -f "$fpath" ] || continue
             fname=$(basename "$fpath")
             case "$fname" in
-                *Emoji*|*emoji*|*Symbol*|*symbol*|*Clock*|*clock*|*NotoSansHebrew*|*NotoSansArabic*|*NotoSansThai*) ;;
+                *Emoji*|*emoji*) ;;
+                *Clock*|*clock*)
+                    cp -f "$ROUND_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$ROUND_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                    ;;
+                *Variable*|*VF*|*Flex*)
+                    cp -f "$VAR_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$VAR_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                    ;;
+                *Symbol*|*symbol*|*NotoSansHebrew*|*NotoSansArabic*|*NotoSansThai*|*NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansCJK*|*NotoSerifCJK*) ;;
                 *)
-                    cp -f "$BASE_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
-                    cp -f "$BASE_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                    cp -f "$HEAVY_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$HEAVY_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
             esac
         done

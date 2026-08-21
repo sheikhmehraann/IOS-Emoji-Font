@@ -2,7 +2,6 @@ import os
 import shutil
 import zipfile
 import hashlib
-import struct
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODULE_DIR = os.path.join(BASE_DIR, "module")
@@ -10,6 +9,7 @@ DIST_DIR = os.path.join(BASE_DIR, "dist")
 OUTPUT_ZIP = os.path.join(DIST_DIR, "iOS_Bold_Font_Emoji_v2.0_Ultra.zip")
 
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
+APPLE_FONTS_DIR = os.path.join(ASSETS_DIR, "apple_fonts")
 
 def clean_module_dir():
     if os.path.exists(MODULE_DIR):
@@ -24,58 +24,6 @@ def write_lf_file(filepath, content):
     with open(filepath, "wb") as f:
         f.write(content.replace("\r\n", "\n").encode("utf-8"))
 
-def patch_font_bold_flags(in_path, out_path):
-    with open(in_path, "rb") as f:
-        data = bytearray(f.read())
-        
-    num_tables = struct.unpack(">H", data[4:6])[0]
-    tables = {}
-    for i in range(num_tables):
-        tag = data[12+i*16:16+i*16].decode("latin-1")
-        offset = struct.unpack(">I", data[20+i*16:24+i*16])[0]
-        length = struct.unpack(">I", data[24+i*16:28+i*16])[0]
-        tables[tag] = (offset, length, 12+i*16)
-        
-    # 1. Update OS/2 table for Bold / Heavy weight
-    if "OS/2" in tables:
-        off, length, rec_off = tables["OS/2"]
-        # Set usWeightClass to 800 (Heavy/Bold)
-        struct.pack_into(">H", data, off+4, 800)
-        # Set fsSelection bit 5 (Bold)
-        sel = struct.unpack(">H", data[off+62:off+64])[0]
-        sel |= 0x0020
-        struct.pack_into(">H", data, off+62, sel)
-        
-    # 2. Update head table for Bold macStyle
-    if "head" in tables:
-        off, length, rec_off = tables["head"]
-        mac_style = struct.unpack(">H", data[off+44:off+46])[0]
-        mac_style |= 0x0001
-        struct.pack_into(">H", data, off+44, mac_style)
-        
-    # Recalculate table checksums
-    for tag, (off, length, rec_off) in tables.items():
-        padded_len = (length + 3) & ~3
-        table_bytes = data[off:off+length] + b"\x00" * (padded_len - length)
-        csum = sum(struct.unpack(f">{padded_len//4}I", table_bytes)) & 0xFFFFFFFF
-        if tag == "head":
-            struct.pack_into(">I", data, off+8, 0)
-            table_bytes = data[off:off+length] + b"\x00" * (padded_len - length)
-            csum = sum(struct.unpack(f">{padded_len//4}I", table_bytes)) & 0xFFFFFFFF
-        struct.pack_into(">I", data, rec_off+4, csum)
-        
-    # Recalculate entire font checkSumAdjustment
-    if "head" in tables:
-        head_off = tables["head"][0]
-        padded_total = (len(data) + 3) & ~3
-        full_bytes = data + b"\x00" * (padded_total - len(data))
-        total_csum = sum(struct.unpack(f">{padded_total//4}I", full_bytes)) & 0xFFFFFFFF
-        adjustment = (0xB1B0AFBA - total_csum) & 0xFFFFFFFF
-        struct.pack_into(">I", data, head_off+8, adjustment)
-        
-    with open(out_path, "wb") as f:
-        f.write(data)
-
 def copy_assets():
     print("[*] Copying META-INF installer binaries...")
     src_meta = os.path.join(ASSETS_DIR, "META-INF", "com", "google", "android")
@@ -88,21 +36,28 @@ def copy_assets():
     shutil.copy2(emoji_src, os.path.join(MODULE_DIR, "system", "fonts", "NotoColorEmoji.ttf"))
     print("  + system/fonts/NotoColorEmoji.ttf")
 
-    print("[*] Patching & deploying SF Pro Text Heavy (True Bold) font...")
-    font_heavy_src = os.path.join(ASSETS_DIR, "system", "fonts", "Roboto-Regular.ttf")
-    font_heavy_dst = os.path.join(MODULE_DIR, "system", "fonts", "Roboto-Regular.ttf")
-    patch_font_bold_flags(font_heavy_src, font_heavy_dst)
-    print("  + system/fonts/Roboto-Regular.ttf (Native Bold Flags Active)")
+    print("[*] Copying Authentic Apple SF Pro Font Suite...")
+    # 1. SF-Pro Variable (for Android 12-16 Variable font engines)
+    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro.ttf"), os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Variable.ttf"))
+    # 2. SF-Pro Text Heavy (True Thick Bold)
+    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Heavy.otf"), os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Heavy.otf"))
+    # 3. SF-Pro Text Bold
+    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Bold.otf"), os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Bold.otf"))
+    # 4. SF-Pro Rounded Bold (for Lockscreen Clock & Numbers)
+    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Rounded-Bold.otf"), os.path.join(MODULE_DIR, "system", "fonts", "SF-Pro-Rounded.otf"))
+    # 5. Base Roboto fallback
+    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Pro-Text-Heavy.otf"), os.path.join(MODULE_DIR, "system", "fonts", "Roboto-Regular.ttf"))
+    print("  + SF-Pro-Variable.ttf, SF-Pro-Heavy.otf, SF-Pro-Bold.otf, SF-Pro-Rounded.otf")
 
 def write_module_scripts():
-    print("[*] Generating universal multi-partition font scripts...")
+    print("[*] Generating authentic Apple font deployment scripts...")
 
     module_prop = """id=ios_bold_font_emoji
 name= iOS Bold Font & iOS 26.4 Emoji
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Systemlessly replaces UI fonts with Apple SF Pro (Bold/Heavy) and emojis with iOS 26.4 Apple Color Emoji. Features GMS override protection, early post-fs-data mounting, and full OverlayFS support.
+description= Systemlessly replaces UI fonts with authentic Apple SF Pro (Heavy/Bold) and emojis with iOS 26.4 Apple Color Emoji. Features GMS override protection, early post-fs-data mounting, and full OverlayFS support.
 """
 
     post_fs_data_sh = r"""#!/system/bin/sh
@@ -114,8 +69,12 @@ description= Systemlessly replaces UI fonts with Apple SF Pro (Bold/Heavy) an
 ##########################################################################################
 
 MODPATH=${0%/*}
-BASE_FONT="$MODPATH/system/fonts/Roboto-Regular.ttf"
-BASE_EMOJI="$MODPATH/system/fonts/NotoColorEmoji.ttf"
+FONT_DIR="$MODPATH/system/fonts"
+VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
+HEAVY_FONT="$FONT_DIR/SF-Pro-Heavy.otf"
+BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
+ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
+BASE_EMOJI="$FONT_DIR/NotoColorEmoji.ttf"
 
 # Clean dynamic Android 12-16 FontManager caches before system_server starts
 rm -rf /data/fonts/* 2>/dev/null
@@ -127,36 +86,46 @@ rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 mkdir -p /data/fonts 2>/dev/null
 chmod 755 /data/fonts 2>/dev/null
 
-# Universal Dynamic Bind-Mount across ALL active partitions & fonts
-if [ -f "$BASE_FONT" ]; then
-    for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /system/product/fonts /system/system_ext/fonts; do
-        if [ -d "$target_dir" ]; then
-            for fpath in "$target_dir"/*.ttf "$target_dir"/*.otf; do
-                [ -f "$fpath" ] || continue
-                fname=$(basename "$fpath")
-                case "$fname" in
-                    *Emoji*|*emoji*)
-                        if [ -f "$BASE_EMOJI" ]; then
-                            mount -o bind "$BASE_EMOJI" "$fpath" 2>/dev/null
-                        fi
-                        ;;
-                    *Symbol*|*symbol*|*Clock*|*clock*|*NotoSansHebrew*|*NotoSansArabic*|*NotoSansThai*) ;;
-                    *)
-                        if [ -f "$MODPATH/system/fonts/$fname" ]; then
-                            mount -o bind "$MODPATH/system/fonts/$fname" "$fpath" 2>/dev/null
-                        elif [ -f "$MODPATH/product/fonts/$fname" ]; then
-                            mount -o bind "$MODPATH/product/fonts/$fname" "$fpath" 2>/dev/null
-                        elif [ -f "$MODPATH/system_ext/fonts/$fname" ]; then
-                            mount -o bind "$MODPATH/system_ext/fonts/$fname" "$fpath" 2>/dev/null
-                        else
-                            mount -o bind "$BASE_FONT" "$fpath" 2>/dev/null
-                        fi
-                        ;;
-                esac
-            done
-        fi
-    done
-fi
+# Early-boot Dynamic Bind-Mount across ALL active partitions & fonts
+for target_dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts /system/product/fonts /system/system_ext/fonts; do
+    if [ -d "$target_dir" ]; then
+        for fpath in "$target_dir"/*.ttf "$target_dir"/*.otf; do
+            [ -f "$fpath" ] || continue
+            fname=$(basename "$fpath")
+            case "$fname" in
+                *Emoji*|*emoji*)
+                    if [ -f "$BASE_EMOJI" ]; then
+                        mount -o bind "$BASE_EMOJI" "$fpath" 2>/dev/null
+                    fi
+                    ;;
+                *Clock*|*clock*)
+                    if [ -f "$ROUND_FONT" ]; then
+                        mount -o bind "$ROUND_FONT" "$fpath" 2>/dev/null
+                    fi
+                    ;;
+                *Variable*|*VF*|*Flex*)
+                    if [ -f "$VAR_FONT" ]; then
+                        mount -o bind "$VAR_FONT" "$fpath" 2>/dev/null
+                    elif [ -f "$HEAVY_FONT" ]; then
+                        mount -o bind "$HEAVY_FONT" "$fpath" 2>/dev/null
+                    fi
+                    ;;
+                *Symbol*|*symbol*|*NotoSansHebrew*|*NotoSansArabic*|*NotoSansThai*|*NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansCJK*|*NotoSerifCJK*) ;;
+                *)
+                    if [ -f "$MODPATH/system/fonts/$fname" ]; then
+                        mount -o bind "$MODPATH/system/fonts/$fname" "$fpath" 2>/dev/null
+                    elif [ -f "$MODPATH/product/fonts/$fname" ]; then
+                        mount -o bind "$MODPATH/product/fonts/$fname" "$fpath" 2>/dev/null
+                    elif [ -f "$MODPATH/system_ext/fonts/$fname" ]; then
+                        mount -o bind "$MODPATH/system_ext/fonts/$fname" "$fpath" 2>/dev/null
+                    elif [ -f "$HEAVY_FONT" ]; then
+                        mount -o bind "$HEAVY_FONT" "$fpath" 2>/dev/null
+                    fi
+                    ;;
+            esac
+        done
+    fi
+done
 """
 
     customize_sh = r"""#!/system/bin/sh
@@ -199,8 +168,11 @@ ui_print "      • Android : $ANDROID_VER (SDK $ANDROID_SDK)"
 ui_print " "
 
 FONT_DIR="$MODPATH/system/fonts"
+VAR_FONT="$FONT_DIR/SF-Pro-Variable.ttf"
+HEAVY_FONT="$FONT_DIR/SF-Pro-Heavy.otf"
+BOLD_FONT="$FONT_DIR/SF-Pro-Bold.otf"
+ROUND_FONT="$FONT_DIR/SF-Pro-Rounded.otf"
 FONT_EMOJI="NotoColorEmoji.ttf"
-BASE_FONT="$FONT_DIR/Roboto-Regular.ttf"
 
 package_installed() {
     local package="$1"
@@ -257,35 +229,60 @@ mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/vendor/fonts" 2>/dev/null
 
-ui_print "  [+] Step 1/4: Expanding SF Pro Heavy to ALL Partition Targets..."
+ui_print "  [+] Step 1/4: Injecting Apple SF Pro Heavy & Variable Typography..."
 
-# 1. Baseline Common Font Targets across AOSP, Pixel, Samsung, Xiaomi, OnePlus, Transsion
-common_targets="
-Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf
-RobotoStatic-Regular.ttf RobotoStatic-Bold.ttf RobotoStatic-Medium.ttf RobotoStatic-Italic.ttf RobotoStatic-BoldItalic.ttf RobotoStatic-Light.ttf RobotoStatic-Thin.ttf RobotoStatic-Black.ttf
+# 1. Variable Font Targets (Android 12-16 Variable Font Engines)
+var_targets="
 Roboto-VariableFont_wdth,wght.ttf Roboto-Italic-VariableFont_wdth,wght.ttf RobotoFlex-Regular.ttf
-RobotoCondensed-Regular.ttf RobotoCondensed-Bold.ttf RobotoCondensed-Italic.ttf RobotoCondensed-BoldItalic.ttf RobotoCondensed-Light.ttf RobotoCondensed-LightItalic.ttf RobotoCondensed-Medium.ttf RobotoCondensed-MediumItalic.ttf
-GoogleSans-Regular.ttf GoogleSans-Medium.ttf GoogleSans-Bold.ttf GoogleSans-Italic.ttf GoogleSans-BoldItalic.ttf GoogleSans-MediumItalic.ttf GoogleSansFlex-Regular.ttf GoogleSansClock-Regular.ttf
-GoogleSansText-Regular.ttf GoogleSansText-Medium.ttf GoogleSansText-Bold.ttf GoogleSansText-Italic.ttf GoogleSansText-BoldItalic.ttf GoogleSansText-MediumItalic.ttf
-GS-Regular.ttf GS-Medium.ttf GS-Bold.ttf GS-Italic.ttf AndroidClock.ttf
-TranSansShell.ttf TranSansSCShell.ttf TranSans_Regular.ttf TranSans_Medium.ttf TranSans_Bold.ttf TranSans_Italic.ttf TranSans_SC.ttf TranSans_TC.ttf
-TOS_VF.ttf TOS_VF_SC.ttf TransSans-Regular.ttf TransSans-Medium.ttf TransSans-Bold.ttf TransSans_Italic.ttf TransSans_SC.ttf TransSans_Thai.ttf
-InfinixSans-Regular.ttf InfinixSans-Bold.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf
-SECRobotoLight-Regular.ttf SECRobotoLight-Bold.ttf SECRoboto-Regular.ttf SECRoboto-Bold.ttf SamsungOne-400.ttf SamsungOne-500.ttf SamsungOne-600.ttf SamsungOne-700.ttf SamsungSans-Regular.ttf SamsungSans-Bold.ttf
-MiSans-Regular.ttf MiSans-Medium.ttf MiSans-Demibold.ttf MiSans-Bold.ttf MiSans-Heavy.ttf MiSans-Light.ttf MiSans-Thin.ttf MiSans-Normal.ttf MiSans-Semibold.ttf MiSansVF.ttf MiSans_VF.ttf MiSansLatin-Regular.ttf MiSansLatin-Bold.ttf Miui-Regular.ttf Miui-Bold.ttf
-OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.ttf OPlusSans2.0-VF.ttf OPlusSans3.0-VF.ttf SysSans-En-Regular.ttf OnePlusSans-Regular.ttf OnePlusSans-Bold.ttf
+TOS_VF.ttf TOS_VF_SC.ttf
+GoogleSansFlex-Regular.ttf
+MiSansVF.ttf MiSans_VF.ttf
+OPlusSans2.0-VF.ttf OPlusSans3.0-VF.ttf
 "
-
-for f in $common_targets; do
-    cp -f "$BASE_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
-    cp -f "$BASE_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
-    cp -f "$BASE_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
-    cp -f "$BASE_FONT" "$MODPATH/vendor/fonts/$f" 2>/dev/null
-    cp -f "$BASE_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
-    cp -f "$BASE_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
+for f in $var_targets; do
+    cp -f "$VAR_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$VAR_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$VAR_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+    cp -f "$VAR_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
+    cp -f "$VAR_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
 done
 
-# 2. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI font
+# 2. Clock & Lockscreen Font Targets (Apple Rounded Bold)
+clock_targets="
+AndroidClock.ttf GoogleSansClock-Regular.ttf
+"
+for f in $clock_targets; do
+    cp -f "$ROUND_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$ROUND_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$ROUND_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+    cp -f "$ROUND_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
+done
+
+# 3. Heavy / Bold UI Font Targets (Apple SF Pro Heavy)
+heavy_targets="
+Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf Roboto-Light.ttf Roboto-LightItalic.ttf Roboto-Thin.ttf Roboto-ThinItalic.ttf
+RobotoStatic-Regular.ttf RobotoStatic-Bold.ttf RobotoStatic-Medium.ttf RobotoStatic-Italic.ttf RobotoStatic-BoldItalic.ttf RobotoStatic-Light.ttf RobotoStatic-Thin.ttf RobotoStatic-Black.ttf
+RobotoCondensed-Regular.ttf RobotoCondensed-Bold.ttf RobotoCondensed-Italic.ttf RobotoCondensed-BoldItalic.ttf RobotoCondensed-Light.ttf RobotoCondensed-LightItalic.ttf RobotoCondensed-Medium.ttf RobotoCondensed-MediumItalic.ttf
+GoogleSans-Regular.ttf GoogleSans-Medium.ttf GoogleSans-Bold.ttf GoogleSans-Italic.ttf GoogleSans-BoldItalic.ttf GoogleSans-MediumItalic.ttf
+GoogleSansText-Regular.ttf GoogleSansText-Medium.ttf GoogleSansText-Bold.ttf GoogleSansText-Italic.ttf GoogleSansText-BoldItalic.ttf GoogleSansText-MediumItalic.ttf
+GS-Regular.ttf GS-Medium.ttf GS-Bold.ttf GS-Italic.ttf
+TranSansShell.ttf TranSansSCShell.ttf TranSans_Regular.ttf TranSans_Medium.ttf TranSans_Bold.ttf TranSans_Italic.ttf TranSans_SC.ttf TranSans_TC.ttf
+TransSans-Regular.ttf TransSans-Medium.ttf TransSans-Bold.ttf TransSans_Italic.ttf TransSans_SC.ttf TransSans_Thai.ttf
+InfinixSans-Regular.ttf InfinixSans-Bold.ttf TecnoSans-Regular.ttf TecnoSans-Bold.ttf
+SECRobotoLight-Regular.ttf SECRobotoLight-Bold.ttf SECRoboto-Regular.ttf SECRoboto-Bold.ttf SamsungOne-400.ttf SamsungOne-500.ttf SamsungOne-600.ttf SamsungOne-700.ttf SamsungSans-Regular.ttf SamsungSans-Bold.ttf
+MiSans-Regular.ttf MiSans-Medium.ttf MiSans-Demibold.ttf MiSans-Bold.ttf MiSans-Heavy.ttf MiSans-Light.ttf MiSans-Thin.ttf MiSans-Normal.ttf MiSans-Semibold.ttf MiSansLatin-Regular.ttf MiSansLatin-Bold.ttf Miui-Regular.ttf Miui-Bold.ttf
+OPlusSans-Regular.ttf OPlusSans-Medium.ttf OPlusSans-Bold.ttf OPlusSans-Light.ttf SysSans-En-Regular.ttf OnePlusSans-Regular.ttf OnePlusSans-Bold.ttf
+"
+for f in $heavy_targets; do
+    cp -f "$HEAVY_FONT" "$MODPATH/system/fonts/$f" 2>/dev/null
+    cp -f "$HEAVY_FONT" "$MODPATH/product/fonts/$f" 2>/dev/null
+    cp -f "$HEAVY_FONT" "$MODPATH/system_ext/fonts/$f" 2>/dev/null
+    cp -f "$HEAVY_FONT" "$MODPATH/vendor/fonts/$f" 2>/dev/null
+    cp -f "$HEAVY_FONT" "$MODPATH/system/product/fonts/$f" 2>/dev/null
+    cp -f "$HEAVY_FONT" "$MODPATH/system/system_ext/fonts/$f" 2>/dev/null
+done
+
+# 4. Dynamic Real-Time ROM Scanner: Scan device partitions for ANY active UI font
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     if [ -d "$pdir" ]; then
         sub="${pdir#/}"
@@ -293,10 +290,19 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
             [ -f "$fpath" ] || continue
             fname=$(basename "$fpath")
             case "$fname" in
-                *Emoji*|*emoji*|*Symbol*|*symbol*|*Clock*|*clock*|*NotoSansHebrew*|*NotoSansArabic*|*NotoSansThai*) ;;
+                *Emoji*|*emoji*) ;;
+                *Clock*|*clock*)
+                    cp -f "$ROUND_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$ROUND_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                    ;;
+                *Variable*|*VF*|*Flex*)
+                    cp -f "$VAR_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$VAR_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                    ;;
+                *Symbol*|*symbol*|*NotoSansHebrew*|*NotoSansArabic*|*NotoSansThai*|*NotoSansDevanagari*|*NotoSansBengali*|*NotoSansTamil*|*NotoSansTelugu*|*NotoSansKannada*|*NotoSansMalayalam*|*NotoSansSinhala*|*NotoSansMyanmar*|*NotoSansKhmer*|*NotoSansLao*|*NotoSansCJK*|*NotoSerifCJK*) ;;
                 *)
-                    cp -f "$BASE_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
-                    cp -f "$BASE_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
+                    cp -f "$HEAVY_FONT" "$MODPATH/$sub/$fname" 2>/dev/null
+                    cp -f "$HEAVY_FONT" "$MODPATH/system/$sub/$fname" 2>/dev/null
                     ;;
             esac
         done
