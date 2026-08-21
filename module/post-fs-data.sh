@@ -3,9 +3,8 @@
 # iOS Bold Font & iOS 26.4 Emoji — Early Boot (post-fs-data)
 # Author: sheikhmehraan
 #
-# Runs before Zygote. Bind-mounts Apple fonts over every system font file
-# that the Magisk overlay might have missed (OverlayFS edge cases, dynamic
-# partitions, A/B slots).
+# Bind-mounts Apple fonts over EVERY system font file as a nuclear fallback
+# for OverlayFS edge cases, dynamic partitions, and A/B slots.
 ##########################################################################################
 
 MODPATH=${0%/*}
@@ -19,13 +18,11 @@ AMF="$FD/SF-Armenian.ttf"
 GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
-# Nuke dynamic font caches before system_server starts
 rm -rf /data/fonts/* 2>/dev/null
 rm -f  /data/system/font_fallback.xml 2>/dev/null
 rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
 rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 
-# Bind-mount over every font in every font directory
 for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
            /system/product/fonts /system/system_ext/fonts /system/vendor/fonts; do
     [ -d "$dir" ] || continue
@@ -49,7 +46,6 @@ for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
             TOS_VF*|*Variable*|*VF*|*Flex*)
                 [ -f "$VF" ] && mount -o bind "$VF" "$fpath" 2>/dev/null ;;
             *Devanagari*|*Bengali*|*Tamil*|*Telugu*|*Kannada*|*Malayalam*|*Gurmukhi*|*Gujarati*|*Oriya*|*Sinhala*|*Myanmar*|*Khmer*|*Lao*|*Thai*|*Tibetan*|*Ethiopic*|*Cherokee*|*Canadian*|*CJK*|*HanSans*)
-                # For Indic/SEA/CJK: bind bold variant over regular/light/thin
                 case "$fname" in
                     *Regular*|*Light*|*Thin*|*Medium*)
                         bold=$(echo "$fpath" | sed 's/Regular/Bold/g;s/Light/Bold/g;s/Thin/Bold/g;s/Medium/Bold/g')

@@ -12,8 +12,10 @@ OUTPUT_ZIP = os.path.join(DIST_DIR, "iOS_Bold_Font_Emoji_v2.0_Ultra.zip")
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 APPLE_FONTS_DIR = os.path.join(ASSETS_DIR, "apple_fonts")
 
-# Weight 700 = standard CSS/OpenType "Bold" — matches real iOS rendering
-BOLD_WEIGHT = 700.0
+# Apple's "Bold" .otf files are actually weight 600 (Semibold).
+# Real visible bold on iOS "Bold Text" mode = weight 800.
+# We use 800 for variable axes and SF-Pro-Display-Heavy.otf (800) as the static font.
+BOLD_WEIGHT = 800.0
 
 
 def clean_module_dir():
@@ -22,7 +24,6 @@ def clean_module_dir():
 
 
 def ensure_dirs():
-    # Magisk/KSU/APatch require ALL overlays under system/ prefix
     for sub in [
         os.path.join("META-INF", "com", "google", "android"),
         os.path.join("system", "fonts"),
@@ -46,11 +47,11 @@ def patch_variable_font(in_path, out_path, weight=BOLD_WEIGHT):
     num_tables = struct.unpack(">H", data[4:6])[0]
     tables = {}
     for i in range(num_tables):
-        off_rec = 12 + i * 16
-        tag = data[off_rec:off_rec + 4].decode("latin-1")
-        offset = struct.unpack(">I", data[off_rec + 8:off_rec + 12])[0]
-        length = struct.unpack(">I", data[off_rec + 12:off_rec + 16])[0]
-        tables[tag] = (offset, length, off_rec)
+        r = 12 + i * 16
+        tag = data[r:r + 4].decode("latin-1")
+        offset = struct.unpack(">I", data[r + 8:r + 12])[0]
+        length = struct.unpack(">I", data[r + 12:r + 16])[0]
+        tables[tag] = (offset, length, r)
 
     if "fvar" in tables:
         off = tables["fvar"][0]
@@ -75,7 +76,6 @@ def patch_variable_font(in_path, out_path, weight=BOLD_WEIGHT):
         ms = struct.unpack(">H", data[off + 44:off + 46])[0]
         struct.pack_into(">H", data, off + 44, ms | 0x0001)
 
-    # Recalculate checksums
     for tag, (off, length, rec_off) in tables.items():
         pl = (length + 3) & ~3
         tb = data[off:off + length] + b"\x00" * (pl - length)
@@ -97,7 +97,6 @@ def patch_variable_font(in_path, out_path, weight=BOLD_WEIGHT):
 
 
 def copy_assets():
-    # META-INF
     src = os.path.join(ASSETS_DIR, "META-INF", "com", "google", "android")
     dst = os.path.join(MODULE_DIR, "META-INF", "com", "google", "android")
     shutil.copy2(os.path.join(src, "update-binary"), os.path.join(dst, "update-binary"))
@@ -111,43 +110,43 @@ def copy_assets():
         os.path.join(sysfonts, "NotoColorEmoji.ttf"),
     )
 
-    # SF Pro Variable Bold (weight 700)
+    # SF Pro Variable (wght axis locked to 800)
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro.ttf"),
         os.path.join(sysfonts, "SF-Pro-Variable.ttf"),
     )
 
-    # SF Pro Display Bold (static, for all UI text)
+    # SF Pro Display Heavy (static, weight 800 — the REAL bold, not the 600 "Bold")
     shutil.copy2(
-        os.path.join(APPLE_FONTS_DIR, "SF-Pro-Display-Bold.otf"),
+        os.path.join(APPLE_FONTS_DIR, "SF-Pro-Display-Heavy.otf"),
         os.path.join(sysfonts, "SF-Pro-Bold.otf"),
     )
 
-    # SF Pro Rounded Bold (clocks, lockscreen numbers)
+    # SF Pro Rounded Bold (clocks / lockscreen)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro-Rounded-Bold.otf"),
         os.path.join(sysfonts, "SF-Pro-Rounded.otf"),
     )
 
-    # SF Arabic Bold (Urdu, Arabic, Persian, Pashto)
+    # SF Arabic (Urdu/Arabic/Persian) — wght axis locked to 800
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Arabic.ttf"),
         os.path.join(sysfonts, "SF-Arabic.ttf"),
     )
 
-    # SF Hebrew Bold
+    # SF Hebrew — wght axis locked to 800
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Hebrew.ttf"),
         os.path.join(sysfonts, "SF-Hebrew.ttf"),
     )
 
-    # SF Armenian Bold
+    # SF Armenian — wght axis locked to 800
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Armenian.ttf"),
         os.path.join(sysfonts, "SF-Armenian.ttf"),
     )
 
-    # SF Georgian Bold
+    # SF Georgian — wght axis locked to 800
     patch_variable_font(
         os.path.join(APPLE_FONTS_DIR, "SF-Georgian.ttf"),
         os.path.join(sysfonts, "SF-Georgian.ttf"),
@@ -155,17 +154,15 @@ def copy_assets():
 
 
 def write_module_scripts():
-    # ── module.prop ──
     write_lf(os.path.join(MODULE_DIR, "module.prop"), """\
 id=ios_bold_font_emoji
 name= iOS Bold Font & iOS 26.4 Emoji
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Replaces system fonts with Apple SF Pro Bold and emojis with iOS 26.4 Apple Color Emoji across all languages and partitions.
+description= Replaces system fonts with Apple SF Pro Bold (weight 800) and emojis with iOS 26.4 Apple Color Emoji across all languages and partitions.
 """)
 
-    # ── customize.sh ──
     write_lf(os.path.join(MODULE_DIR, "customize.sh"), r"""#!/system/bin/sh
 ##########################################################################################
 # iOS Bold Font & iOS 26.4 Emoji — Installer
@@ -192,20 +189,17 @@ ui_print "  [i] Device: $(getprop ro.product.brand) $(getprop ro.product.model)"
 ui_print "  [i] Android $(getprop ro.build.version.release) (SDK $(getprop ro.build.version.sdk))"
 ui_print " "
 
-# Source font paths (shipped inside the ZIP under system/fonts/)
 FD="$MODPATH/system/fonts"
-VF="$FD/SF-Pro-Variable.ttf"   # variable, wght axis locked to 700
-BF="$FD/SF-Pro-Bold.otf"       # static Apple SF Pro Display Bold
-RF="$FD/SF-Pro-Rounded.otf"    # static Apple SF Pro Rounded Bold
-AF="$FD/SF-Arabic.ttf"         # variable, wght 700 — Urdu/Arabic/Persian
+VF="$FD/SF-Pro-Variable.ttf"
+BF="$FD/SF-Pro-Bold.otf"
+RF="$FD/SF-Pro-Rounded.otf"
+AF="$FD/SF-Arabic.ttf"
 HF="$FD/SF-Hebrew.ttf"
 AMF="$FD/SF-Armenian.ttf"
 GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
-# Helper: copy a font to the overlay for a given target filename.
-# Magisk/KSU/APatch overlay paths MUST start with system/ — standalone
-# /product, /vendor, /system_ext are symlinks INTO /system on modern Android.
+# All overlay paths MUST be under system/ for Magisk/KSU/APatch
 place() {
     local src="$1" name="$2"
     cp -f "$src" "$MODPATH/system/fonts/$name"                2>/dev/null
@@ -214,7 +208,8 @@ place() {
     cp -f "$src" "$MODPATH/system/vendor/fonts/$name"         2>/dev/null
 }
 
-ui_print "  [1/5] Replacing Variable Fonts (Roboto VF, TOS_VF, GoogleSansFlex, MiSans VF)..."
+# ── Variable fonts (TOS_VF, Roboto VF, GoogleSansFlex, MiSans VF, OPlus VF) ──
+ui_print "  [1/5] Variable fonts..."
 for f in \
     Roboto-VariableFont_wdth,wght.ttf  Roboto-Italic-VariableFont_wdth,wght.ttf \
     RobotoFlex-Regular.ttf \
@@ -223,10 +218,10 @@ for f in \
     MiSansVF.ttf  MiSans_VF.ttf \
     OPlusSans2.0-VF.ttf  OPlusSans3.0-VF.ttf
 do place "$VF" "$f"; done
-ui_print "      ✔ Variable font targets replaced"
-ui_print " "
+ui_print "      ✔ Done"
 
-ui_print "  [2/5] Replacing Static UI Fonts (Roboto, TranSans, Google Sans, Samsung, Xiaomi, OnePlus)..."
+# ── Static UI fonts (Roboto, TranSans, Google Sans, Samsung, Xiaomi, OnePlus, etc.) ──
+ui_print "  [2/5] Static UI fonts..."
 for f in \
     Roboto-Regular.ttf Roboto-Bold.ttf Roboto-Medium.ttf Roboto-MediumItalic.ttf \
     Roboto-Italic.ttf Roboto-BoldItalic.ttf Roboto-Black.ttf Roboto-BlackItalic.ttf \
@@ -264,45 +259,43 @@ for f in \
     CutiveMono.ttf ComingSoon.ttf DancingScript-Regular.ttf DancingScript-Bold.ttf \
     CarroisGothicSC-Regular.ttf
 do place "$BF" "$f"; done
-ui_print "      ✔ Static UI font targets replaced"
-ui_print " "
+ui_print "      ✔ Done"
 
-ui_print "  [3/5] Replacing Multilingual Script Fonts (Urdu, Arabic, Hebrew, Armenian, Georgian)..."
-# Arabic / Urdu / Persian / Pashto
+# ── Multilingual script fonts ──
+ui_print "  [3/5] Multilingual scripts (Urdu, Arabic, Hebrew, Armenian, Georgian)..."
+
+# Arabic / Urdu / Persian — on iOS these ALL use SF Arabic (Naskh style, not Nastaliq)
 for f in \
     NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf \
+    NotoNastaliqUrdu.ttf \
     NotoSansArabic-Regular.ttf NotoSansArabic-Bold.ttf NotoSansArabic-Medium.ttf \
     NotoSansArabicUI-Regular.ttf NotoSansArabicUI-Bold.ttf NotoSansArabicUI-Medium.ttf \
     NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
     NotoNaskhArabicUI-Regular.ttf NotoNaskhArabicUI-Bold.ttf \
     NotoKufiArabic-Regular.ttf NotoKufiArabic-Bold.ttf
 do place "$AF" "$f"; done
-# Hebrew
-for f in \
-    NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf NotoSansHebrew-Medium.ttf
+
+for f in NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf NotoSansHebrew-Medium.ttf
 do place "$HF" "$f"; done
-# Armenian
-for f in \
-    NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf NotoSansArmenian-Medium.ttf
+
+for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf NotoSansArmenian-Medium.ttf
 do place "$AMF" "$f"; done
-# Georgian
-for f in \
-    NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf NotoSansGeorgian-Medium.ttf
+
+for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf NotoSansGeorgian-Medium.ttf
 do place "$GF" "$f"; done
-# Clocks
+
 for f in AndroidClock.ttf GoogleSansClock-Regular.ttf
 do place "$RF" "$f"; done
-ui_print "      ✔ Multilingual script fonts replaced"
-ui_print " "
+ui_print "      ✔ Done"
 
-ui_print "  [4/5] Scanning device partitions for unlisted OEM fonts..."
+# ── Dynamic OEM font scanner ──
+ui_print "  [4/5] Scanning device for unlisted OEM fonts..."
 SCAN_COUNT=0
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     [ -d "$pdir" ] || continue
     for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
         [ -f "$fpath" ] || continue
         fname=$(basename "$fpath")
-        # Skip if we already placed this file
         [ -f "$MODPATH/system/fonts/$fname" ] && continue
         case "$fname" in
             *Emoji*|*emoji*|*Symbol*|*symbol*|*Math*|*math*|*Mono*) continue ;;
@@ -318,21 +311,17 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
         SCAN_COUNT=$((SCAN_COUNT + 1))
     done
 done
-ui_print "      ✔ Scanned & replaced $SCAN_COUNT additional OEM fonts"
-ui_print " "
+ui_print "      ✔ Replaced $SCAN_COUNT additional OEM fonts"
 
-ui_print "  [5/5] Deploying iOS 26.4 Emoji, purging caches, setting permissions..."
-# OEM emoji variants
+# ── Emoji, caches, permissions ──
+ui_print "  [5/5] Emoji, caches, permissions..."
 for f in SamsungColorEmoji.ttf LGNotoColorEmoji.ttf HTC_ColorEmoji.ttf \
          AndroidEmoji-htc.ttf ColorUniEmoji.ttf DcmColorEmoji.ttf \
          CombinedColorEmoji.ttf NotoColorEmojiLegacy.ttf NotoColorEmoji-Flags.ttf; do
     if [ -f "/system/fonts/$f" ] || [ -f "/product/fonts/$f" ] || [ -f "/system_ext/fonts/$f" ]; then
         place "$EF" "$f"
-        ui_print "      ✔ Emoji: $f"
     fi
 done
-
-# Parse fonts.xml for any extra emoji family font
 for xml in /system/etc/fonts.xml /product/etc/fonts.xml /system_ext/etc/fonts.xml; do
     [ -f "$xml" ] || continue
     for f in $(sed -ne '/<family lang="und-Zsye".*>/,/<\/family>/{s/.*<font[^>]*>\([^<]*\)<\/font>.*/\1/p;}' "$xml" 2>/dev/null); do
@@ -342,7 +331,6 @@ for xml in /system/etc/fonts.xml /product/etc/fonts.xml /system_ext/etc/fonts.xm
     done
 done
 
-# Purge caches
 rm -rf /data/fonts/* 2>/dev/null
 rm -f  /data/system/font_fallback.xml 2>/dev/null
 for pkg in com.facebook.orca com.facebook.katana com.facebook.lite \
@@ -356,31 +344,27 @@ for pkg in com.facebook.orca com.facebook.katana com.facebook.lite \
 done
 rm -rf /data/data/com.google.android.gms/files/fonts 2>/dev/null
 rm -rf /data/user_de/*/com.google.android.gms/files/fonts 2>/dev/null
-ui_print "      ✔ Caches purged"
 
-# Permissions & SELinux
 set_perm_recursive "$MODPATH" 0 0 0755 0644
 for s in post-fs-data.sh service.sh action.sh; do
     [ -f "$MODPATH/$s" ] && set_perm "$MODPATH/$s" 0 0 0755
 done
 chcon -R u:object_r:system_file:s0 "$MODPATH/system" 2>/dev/null
-ui_print "      ✔ Permissions & SELinux OK"
+ui_print "      ✔ All done"
 ui_print " "
 ui_print "  ─────────────────────────────────────────"
-ui_print "  ✔ Done — reboot to apply.                "
+ui_print "  ✔ Reboot to apply.                       "
 ui_print "  ─────────────────────────────────────────"
 ui_print " "
 """)
 
-    # ── post-fs-data.sh ──
     write_lf(os.path.join(MODULE_DIR, "post-fs-data.sh"), r"""#!/system/bin/sh
 ##########################################################################################
 # iOS Bold Font & iOS 26.4 Emoji — Early Boot (post-fs-data)
 # Author: sheikhmehraan
 #
-# Runs before Zygote. Bind-mounts Apple fonts over every system font file
-# that the Magisk overlay might have missed (OverlayFS edge cases, dynamic
-# partitions, A/B slots).
+# Bind-mounts Apple fonts over EVERY system font file as a nuclear fallback
+# for OverlayFS edge cases, dynamic partitions, and A/B slots.
 ##########################################################################################
 
 MODPATH=${0%/*}
@@ -394,13 +378,11 @@ AMF="$FD/SF-Armenian.ttf"
 GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
-# Nuke dynamic font caches before system_server starts
 rm -rf /data/fonts/* 2>/dev/null
 rm -f  /data/system/font_fallback.xml 2>/dev/null
 rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
 rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 
-# Bind-mount over every font in every font directory
 for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
            /system/product/fonts /system/system_ext/fonts /system/vendor/fonts; do
     [ -d "$dir" ] || continue
@@ -424,7 +406,6 @@ for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
             TOS_VF*|*Variable*|*VF*|*Flex*)
                 [ -f "$VF" ] && mount -o bind "$VF" "$fpath" 2>/dev/null ;;
             *Devanagari*|*Bengali*|*Tamil*|*Telugu*|*Kannada*|*Malayalam*|*Gurmukhi*|*Gujarati*|*Oriya*|*Sinhala*|*Myanmar*|*Khmer*|*Lao*|*Thai*|*Tibetan*|*Ethiopic*|*Cherokee*|*Canadian*|*CJK*|*HanSans*)
-                # For Indic/SEA/CJK: bind bold variant over regular/light/thin
                 case "$fname" in
                     *Regular*|*Light*|*Thin*|*Medium*)
                         bold=$(echo "$fpath" | sed 's/Regular/Bold/g;s/Light/Bold/g;s/Thin/Bold/g;s/Medium/Bold/g')
@@ -439,7 +420,6 @@ for dir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts \
 done
 """)
 
-    # ── service.sh ──
     write_lf(os.path.join(MODULE_DIR, "service.sh"), r"""#!/system/bin/sh
 ##########################################################################################
 # iOS Bold Font & iOS 26.4 Emoji — Late Service
@@ -453,14 +433,12 @@ while [ ! -d /sdcard ]; do sleep 5; done
 
 EF="$MODPATH/system/fonts/NotoColorEmoji.ttf"
 
-# Replace in-app emoji fonts
 if [ -f "$EF" ]; then
     for font in $(find /data/data /data/user/0 -iname "*emoji*.ttf" 2>/dev/null); do
         [ -w "$font" ] && cp -f "$EF" "$font" && chmod 644 "$font" 2>/dev/null
     done
 fi
 
-# Lock Facebook/Messenger emoji
 for pkg in com.facebook.orca com.facebook.katana com.facebook.lite com.facebook.mlite; do
     [ -d "/data/data/$pkg" ] || continue
     t="/data/data/$pkg/app_ras_blobs/FacebookEmoji.ttf"
@@ -468,14 +446,12 @@ for pkg in com.facebook.orca com.facebook.katana com.facebook.lite com.facebook.
     cp -f "$EF" "$t" 2>/dev/null
     chmod 444 "$t" 2>/dev/null
     chattr +i "$t" 2>/dev/null
-    # Nuke font caches
     for sub in /files/fonts /cache /code_cache; do
         rm -rf "/data/data/${pkg}${sub}" 2>/dev/null
     done
     am force-stop "$pkg" 2>/dev/null
 done
 
-# Disable GMS font services
 for uid in $(ls /data/user/ 2>/dev/null); do
     pm disable --user "$uid" "com.google.android.gms/com.google.android.gms.fonts.provider.FontsProvider" 2>/dev/null
     pm disable --user "$uid" "com.google.android.gms/com.google.android.gms.fonts.update.UpdateSchedulerService" 2>/dev/null
@@ -484,7 +460,6 @@ rm -rf /data/fonts/* 2>/dev/null
 find /data -type d -path "*com.google.android.gms/files/fonts*" -exec rm -rf {} + 2>/dev/null
 """)
 
-    # ── action.sh ──
     write_lf(os.path.join(MODULE_DIR, "action.sh"), r"""#!/system/bin/sh
 MODPATH="${0%/*}"
 set +o standalone 2>/dev/null
