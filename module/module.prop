@@ -1,0 +1,6 @@
+id=ios_bold_font_emoji
+name= iOS Bold Font & iOS 26.4 Emoji
+version=v2.0 • Ultra
+versionCode=200
+author=sheikhmehraan
+description= Systemlessly replaces UI fonts with Apple SF Pro (Bold/Heavy) and emojis with iOS 26.4 Apple Color Emoji. Features GMS override protection, early post-fs-data mounting, and full OverlayFS support.
