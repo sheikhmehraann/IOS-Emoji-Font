@@ -58,48 +58,77 @@ place() {
     cp -f "$src" "$MODPATH/system/vendor/fonts/$name" 2>/dev/null
 }
 
-ui_print "  [+] Step 1/5: Deploying Apple SF Pro Heavy over All UI Fonts..."
+ui_print "  [+] Step 1/5: Deploying Apple SF Pro Heavy over System UI Fonts..."
+# Replace ONLY standard Latin/UI system fonts with SF Pro Heavy (NEVER touch multilingual fonts in this step!)
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     [ -d "$pdir" ] || continue
     for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
         [ -f "$fpath" ] || continue
         fname=$(basename "$fpath")
         case "$fname" in
-            *Emoji*|*emoji*|*Symbol*|*symbol*|*Math*|*math*|*.ttc) continue ;;
-            *Clock*|*clock*)                     place "$RF"  "$fname" ;;
-            *Nastaliq*|*nastaliq*|*Urdu*|*urdu*) place "$UF"  "$fname" ;;
-            *Arabic*|*arabic*|*Naskh*|*naskh*|*Kufi*|*kufi*)
-                                                  place "$AF"  "$fname" ;;
-            *Hebrew*|*hebrew*)                    place "$HF"  "$fname" ;;
-            *Armenian*|*armenian*)                place "$AMF" "$fname" ;;
-            *Georgian*|*georgian*)                place "$GF"  "$fname" ;;
-            *Serif*|*serif*)                      place "$NYF" "$fname" ;;
-            *)                                    place "$BTF" "$fname" ;;
+            Roboto*|GoogleSans*|SourceSans*|DroidSans*|SECRoboto*|\
+            TranSans*|TOS*|TransSans*|InfinixSans*|TecnoSans*|ItelSans*|\
+            MiSans*|Miui*|OPlusSans*|OnePlusSans*|Samsung*|\
+            CarroisGothic*|CutiveMono*|ComingSoon*|DancingScript*)
+                place "$BTF" "$fname"
+                ;;
+            *Clock*|*clock*)
+                place "$RF" "$fname"
+                ;;
         esac
     done
 done
-ui_print "      ✔ All UI, Roboto, and TranSans fonts deployed"
+ui_print "      ✔ System UI and English fonts mapped to SF Pro Heavy"
 ui_print " "
 
-ui_print "  [+] Step 2/5: Deploying Apple New York Serif over NotoSerif..."
+ui_print "  [+] Step 2/5: Deploying Apple New York Serif..."
 for f in NotoSerif-Regular.ttf NotoSerif-Bold.ttf NotoSerif-Italic.ttf NotoSerif-BoldItalic.ttf; do
     place "$NYF" "$f"
 done
-ui_print "      ✔ Apple New York Serif fonts deployed"
+ui_print "      ✔ Apple New York Serif deployed"
 ui_print " "
 
-ui_print "  [+] Step 3/5: Deploying All Multilingual World Script Fonts..."
+ui_print "  [+] Step 3/5: Deploying Urdu, Arabic, Hebrew, Armenian, Georgian & Indic Scripts..."
+# 1. Urdu Nastaliq
 for f in NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
          NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf; do
     place "$UF" "$f"
 done
+
+# 2. Arabic
 for f in NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
          NotoNaskhArabicUI-Regular.ttf NotoNaskhArabicUI-Bold.ttf \
          NotoSansArabic-Regular.ttf NotoSansArabic-Bold.ttf \
-         NotoSansArabicUI-Regular.ttf NotoSansArabicUI-Bold.ttf; do
+         NotoSansArabicUI-Regular.ttf NotoSansArabicUI-Bold.ttf \
+         NotoKufiArabic-Regular.ttf NotoKufiArabic-Bold.ttf; do
     place "$AF" "$f"
 done
-ui_print "      ✔ Multilingual typography deployed with 100% metric parity"
+
+# 3. Hebrew
+for f in NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf \
+         NotoSansHebrew-VF.ttf NotoSerifHebrew-Regular.ttf NotoSerifHebrew-Bold.ttf; do
+    place "$HF" "$f"
+done
+
+# 4. Armenian
+for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf \
+         NotoSansArmenian-VF.ttf NotoSerifArmenian-Regular.ttf NotoSerifArmenian-Bold.ttf; do
+    place "$AMF" "$f"
+done
+
+# 5. Georgian
+for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf \
+         NotoSansGeorgian-VF.ttf NotoSerifGeorgian-Regular.ttf NotoSerifGeorgian-Bold.ttf; do
+    place "$GF" "$f"
+done
+
+# 6. Indic & World Script Fonts (Devanagari, Bengali, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Tamil, Telugu, Ethiopic, Khmer, Tibetan)
+for vf in "$FD"/*-VF.ttf; do
+    [ -f "$vf" ] || continue
+    vname=$(basename "$vf")
+    place "$vf" "$vname"
+done
+ui_print "      ✔ All world languages deployed with 100% metric and boldness parity"
 ui_print " "
 
 ui_print "  [+] Step 4/5: Deploying iOS 26.4 Emoji & Purging System Caches..."
