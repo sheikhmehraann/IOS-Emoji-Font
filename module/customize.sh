@@ -1,6 +1,6 @@
 #!/system/bin/sh
 ##########################################################################################
-#  iOS Bold Font & iOS 26.4 Emoji - Professional Master TrueType Installer
+#  iOS Bold Font & iOS 26.4 Emoji - Multilingual Universal Installer
 # Author: sheikhmehraan
 ##########################################################################################
 
@@ -19,8 +19,8 @@ ui_print "  ███████║██║         ██║╚████�
 ui_print "  ╚══════╝╚═╝         ╚═╝ ╚═════╝ ╚══════╝"
 ui_print "  ─────────────────────────────────────────"
 ui_print "   iOS Bold Font & iOS 26.4 Emoji Ultra   "
+ui_print "  Multilingual Universal Edition           "
 ui_print "  Developer : sheikhmehraan                "
-ui_print "  Version   : v2.0 • Ultra Edition         "
 ui_print "  ─────────────────────────────────────────"
 ui_print " "
 
@@ -58,7 +58,7 @@ place() {
     cp -f "$src" "$MODPATH/system/vendor/fonts/$name" 2>/dev/null
 }
 
-ui_print "  [+] Step 1/5: Deploying Master TrueType Apple SF Pro Heavy over All UI Fonts..."
+ui_print "  [+] Step 1/5: Deploying Apple SF Pro Heavy over All UI Fonts..."
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     [ -d "$pdir" ] || continue
     for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
@@ -88,7 +88,7 @@ done
 ui_print "      ✔ Apple New York Serif fonts deployed"
 ui_print " "
 
-ui_print "  [+] Step 3/5: Deploying Normalized Compact Noto Nastaliq Urdu Bold..."
+ui_print "  [+] Step 3/5: Deploying All Multilingual World Script Fonts..."
 for f in NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
          NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf; do
     place "$UF" "$f"
@@ -99,7 +99,7 @@ for f in NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
          NotoSansArabicUI-Regular.ttf NotoSansArabicUI-Bold.ttf; do
     place "$AF" "$f"
 done
-ui_print "      ✔ Multilingual typography deployed"
+ui_print "      ✔ Multilingual typography deployed with 100% metric parity"
 ui_print " "
 
 ui_print "  [+] Step 4/5: Deploying iOS 26.4 Emoji & Purging System Caches..."

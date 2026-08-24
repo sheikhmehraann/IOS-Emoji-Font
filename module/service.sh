@@ -1,6 +1,6 @@
 #!/system/bin/sh
 ##########################################################################################
-#  iOS Bold Font & iOS 26.4 Emoji - Safe Full Font Daemon
+#  iOS Bold Font & iOS 26.4 Emoji - Multilingual Daemon
 # Author: sheikhmehraan
 ##########################################################################################
 
@@ -11,13 +11,16 @@ NYF="$FD/NewYork-Bold.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 AF="$FD/SF-Arabic.ttf"
+HF="$FD/SF-Hebrew.ttf"
+AMF="$FD/SF-Armenian.ttf"
+GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
 # 1. System Emoji
 mount -o bind "$EF" /system/fonts/NotoColorEmoji.ttf 2>/dev/null
 mount -o bind "$EF" /system/fonts/NotoColorEmojiFlags.ttf 2>/dev/null
 
-# 2. All Roboto, GoogleSans, SourceSans, DroidSans styles (Regular, Medium, Bold, Light, Thin, Black, Condensed, Static, Variable, Flex)
+# 2. All Roboto, GoogleSans, SourceSans, DroidSans styles
 for f in /system/fonts/Roboto*.ttf \
          /system/fonts/GoogleSans*.ttf \
          /system/fonts/SourceSansPro*.ttf \
@@ -43,10 +46,18 @@ for f in /product/fonts/* /system_ext/fonts/* /vendor/fonts/*; do
     esac
 done
 
-# 4. Serif & Urdu fonts
+# 4. Serif & Multilingual script mounts
 for f in /system/fonts/NotoSerif*.ttf; do [ -f "$f" ] && mount -o bind "$NYF" "$f" 2>/dev/null; done
 for f in /system/fonts/NotoNaskhArabic*.ttf /system/fonts/NotoSansArabic*.ttf /system/fonts/NotoNastaliqUrdu*.ttf; do
     [ -f "$f" ] && mount -o bind "$UF" "$f" 2>/dev/null
+done
+
+# Bind mount patched multilingual variable fonts
+for f in "$FD"/*-VF.ttf; do
+    [ -f "$f" ] || continue
+    fname=$(basename "$f")
+    [ -f "/system/fonts/$fname" ] && mount -o bind "$f" "/system/fonts/$fname" 2>/dev/null
+    [ -f "/product/fonts/$fname" ] && mount -o bind "$f" "/product/fonts/$fname" 2>/dev/null
 done
 
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done

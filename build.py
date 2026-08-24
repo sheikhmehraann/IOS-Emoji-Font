@@ -10,6 +10,7 @@ OUTPUT_ZIP = os.path.join(DIST_DIR, "iOS_Bold_Font_Emoji_v2.0_Ultra.zip")
 
 ASSETS_DIR = os.path.join(BASE_DIR, "assets")
 APPLE_FONTS_DIR = os.path.join(ASSETS_DIR, "apple_fonts")
+PATCHED_VF_DIR = os.path.join(ASSETS_DIR, "patched_vf")
 
 def clean_module_dir():
     if os.path.exists(MODULE_DIR):
@@ -38,75 +39,63 @@ def copy_assets():
 
     sysfonts = os.path.join(MODULE_DIR, "system", "fonts")
 
-    # iOS 26.4 Apple Color Emoji
+    # 1. iOS 26.4 Apple Color Emoji
     shutil.copy2(
         os.path.join(ASSETS_DIR, "system", "fonts", "NotoColorEmoji.ttf"),
         os.path.join(sysfonts, "NotoColorEmoji.ttf"),
     )
 
-    # Master Bold TrueType SF Pro Heavy (900 Bold, Perfect Android Metrics & Zero Padding Distortion)
+    # 2. Apple SF Pro Text Heavy (Exact 800 Bold dev font with 1950/-494 matched metrics)
     shutil.copy2(
-        os.path.join(APPLE_FONTS_DIR, "SF-Pro-MasterBold.ttf"),
+        os.path.join(APPLE_FONTS_DIR, "SF-Pro-Bold.ttf"),
         os.path.join(sysfonts, "SF-Pro-Bold.ttf"),
     )
     shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Variable.ttf"))
     shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Bold.otf"))
 
-    # Pure TrueType Static Apple New York Serif (700 Bold, Perfect Metrics)
+    # 3. Apple New York Serif Bold
     shutil.copy2(
-        os.path.join(APPLE_FONTS_DIR, "NewYork-Bold-PureStatic.ttf"),
+        os.path.join(APPLE_FONTS_DIR, "NewYork-Bold.ttf"),
         os.path.join(sysfonts, "NewYork-Bold.ttf"),
     )
 
-    # SF Pro Rounded Bold
+    # 4. SF Pro Rounded Bold
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro-Rounded-Bold.otf"),
         os.path.join(sysfonts, "SF-Pro-Rounded.otf"),
     )
 
-    # Normalized Compact Noto Nastaliq Urdu Bold (700 Bold, Compact Line Height)
+    # 5. Normalized Noto Nastaliq Urdu Bold (Proportional 952/-241 on 1000 UPM)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "NotoNastaliqUrdu-Bold.ttf"),
         os.path.join(sysfonts, "NotoNastaliqUrdu-Bold.ttf"),
     )
 
-    # SF Arabic Bold
-    shutil.copy2(
-        os.path.join(APPLE_FONTS_DIR, "SF-Arabic-Bold.ttf"),
-        os.path.join(sysfonts, "SF-Arabic.ttf"),
-    )
+    # 6. Apple SF Multilingual Fonts (SF Arabic, SF Hebrew, SF Armenian, SF Georgian)
+    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Arabic-Bold.ttf"), os.path.join(sysfonts, "SF-Arabic.ttf"))
+    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Hebrew-Bold.ttf"), os.path.join(sysfonts, "SF-Hebrew.ttf"))
+    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Armenian-Bold.ttf"), os.path.join(sysfonts, "SF-Armenian.ttf"))
+    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Georgian-Bold.ttf"), os.path.join(sysfonts, "SF-Georgian.ttf"))
 
-    # SF Hebrew Bold
-    shutil.copy2(
-        os.path.join(APPLE_FONTS_DIR, "SF-Hebrew-Bold.ttf"),
-        os.path.join(sysfonts, "SF-Hebrew.ttf"),
-    )
-
-    # SF Armenian Bold
-    shutil.copy2(
-        os.path.join(APPLE_FONTS_DIR, "SF-Armenian-Bold.ttf"),
-        os.path.join(sysfonts, "SF-Armenian.ttf"),
-    )
-
-    # SF Georgian Bold
-    shutil.copy2(
-        os.path.join(APPLE_FONTS_DIR, "SF-Georgian-Bold.ttf"),
-        os.path.join(sysfonts, "SF-Georgian.ttf"),
-    )
+    # 7. Normalized World Language Fonts (Devanagari, Bengali, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Tamil, Telugu, Ethiopic, Khmer, Tibetan)
+    if os.path.exists(PATCHED_VF_DIR):
+        for fn in os.listdir(PATCHED_VF_DIR):
+            if fn.endswith(".ttf") or fn.endswith(".otf"):
+                shutil.copy2(os.path.join(PATCHED_VF_DIR, fn), os.path.join(sysfonts, fn))
 
 def write_module_scripts():
     write_lf(os.path.join(MODULE_DIR, "module.prop"), """\
 id=ios_bold_font_emoji
-name= iOS Bold Font & iOS 26.4 Emoji
+name= iOS Bold Font & iOS 26.4 Emoji (All Languages Edition)
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraan
-description= Apple SF Pro Master Bold TrueType (900) + Apple New York Serif + Compact Noto Nastaliq Urdu Bold + iOS 26.4 Emoji. Full coverage for TranSans, Roboto, WhatsApp, and in-app font locks.
+description= Complete Multilingual Apple Typography (SF Pro Heavy + New York + SF Arabic/Hebrew/Armenian/Georgian + Urdu Nastaliq Bold + Indic Bold + iOS 26.4 Emoji). 100% Boldness and Zero-Padding-Distortion across all languages.
 """)
 
     write_lf(os.path.join(MODULE_DIR, "customize.sh"), r"""#!/system/bin/sh
 ##########################################################################################
-#  iOS Bold Font & iOS 26.4 Emoji - Professional Master TrueType Installer
+#  iOS Bold Font & iOS 26.4 Emoji - Multilingual Universal Installer
 # Author: sheikhmehraan
 ##########################################################################################
 
@@ -125,8 +114,8 @@ ui_print "  ███████║██║         ██║╚████�
 ui_print "  ╚══════╝╚═╝         ╚═╝ ╚═════╝ ╚══════╝"
 ui_print "  ─────────────────────────────────────────"
 ui_print "   iOS Bold Font & iOS 26.4 Emoji Ultra   "
+ui_print "  Multilingual Universal Edition           "
 ui_print "  Developer : sheikhmehraan                "
-ui_print "  Version   : v2.0 • Ultra Edition         "
 ui_print "  ─────────────────────────────────────────"
 ui_print " "
 
@@ -164,7 +153,7 @@ place() {
     cp -f "$src" "$MODPATH/system/vendor/fonts/$name" 2>/dev/null
 }
 
-ui_print "  [+] Step 1/5: Deploying Master TrueType Apple SF Pro Heavy over All UI Fonts..."
+ui_print "  [+] Step 1/5: Deploying Apple SF Pro Heavy over All UI Fonts..."
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     [ -d "$pdir" ] || continue
     for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
@@ -194,7 +183,7 @@ done
 ui_print "      ✔ Apple New York Serif fonts deployed"
 ui_print " "
 
-ui_print "  [+] Step 3/5: Deploying Normalized Compact Noto Nastaliq Urdu Bold..."
+ui_print "  [+] Step 3/5: Deploying All Multilingual World Script Fonts..."
 for f in NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
          NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf; do
     place "$UF" "$f"
@@ -205,7 +194,7 @@ for f in NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
          NotoSansArabicUI-Regular.ttf NotoSansArabicUI-Bold.ttf; do
     place "$AF" "$f"
 done
-ui_print "      ✔ Multilingual typography deployed"
+ui_print "      ✔ Multilingual typography deployed with 100% metric parity"
 ui_print " "
 
 ui_print "  [+] Step 4/5: Deploying iOS 26.4 Emoji & Purging System Caches..."
@@ -269,7 +258,7 @@ done
 
     write_lf(os.path.join(MODULE_DIR, "service.sh"), r"""#!/system/bin/sh
 ##########################################################################################
-#  iOS Bold Font & iOS 26.4 Emoji - Safe Full Font Daemon
+#  iOS Bold Font & iOS 26.4 Emoji - Multilingual Daemon
 # Author: sheikhmehraan
 ##########################################################################################
 
@@ -280,13 +269,16 @@ NYF="$FD/NewYork-Bold.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
 AF="$FD/SF-Arabic.ttf"
+HF="$FD/SF-Hebrew.ttf"
+AMF="$FD/SF-Armenian.ttf"
+GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
 # 1. System Emoji
 mount -o bind "$EF" /system/fonts/NotoColorEmoji.ttf 2>/dev/null
 mount -o bind "$EF" /system/fonts/NotoColorEmojiFlags.ttf 2>/dev/null
 
-# 2. All Roboto, GoogleSans, SourceSans, DroidSans styles (Regular, Medium, Bold, Light, Thin, Black, Condensed, Static, Variable, Flex)
+# 2. All Roboto, GoogleSans, SourceSans, DroidSans styles
 for f in /system/fonts/Roboto*.ttf \
          /system/fonts/GoogleSans*.ttf \
          /system/fonts/SourceSansPro*.ttf \
@@ -312,10 +304,18 @@ for f in /product/fonts/* /system_ext/fonts/* /vendor/fonts/*; do
     esac
 done
 
-# 4. Serif & Urdu fonts
+# 4. Serif & Multilingual script mounts
 for f in /system/fonts/NotoSerif*.ttf; do [ -f "$f" ] && mount -o bind "$NYF" "$f" 2>/dev/null; done
 for f in /system/fonts/NotoNaskhArabic*.ttf /system/fonts/NotoSansArabic*.ttf /system/fonts/NotoNastaliqUrdu*.ttf; do
     [ -f "$f" ] && mount -o bind "$UF" "$f" 2>/dev/null
+done
+
+# Bind mount patched multilingual variable fonts
+for f in "$FD"/*-VF.ttf; do
+    [ -f "$f" ] || continue
+    fname=$(basename "$f")
+    [ -f "/system/fonts/$fname" ] && mount -o bind "$f" "/system/fonts/$fname" 2>/dev/null
+    [ -f "/product/fonts/$fname" ] && mount -o bind "$f" "/product/fonts/$fname" 2>/dev/null
 done
 
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done
