@@ -23,6 +23,7 @@ def ensure_dirs():
         os.path.join("system", "product", "fonts"),
         os.path.join("system", "system_ext", "fonts"),
         os.path.join("system", "vendor", "fonts"),
+        os.path.join("system", "etc"),
     ]:
         os.makedirs(os.path.join(MODULE_DIR, sub), exist_ok=True)
     os.makedirs(DIST_DIR, exist_ok=True)
@@ -38,14 +39,22 @@ def copy_assets():
     shutil.copy2(os.path.join(src, "updater-script"), os.path.join(dst, "updater-script"))
 
     sysfonts = os.path.join(MODULE_DIR, "system", "fonts")
+    sysetc = os.path.join(MODULE_DIR, "system", "etc")
 
-    # 1. iOS 26.4 Apple Color Emoji
+    # 1. Custom fonts.xml with explicit Urdu, Arabic, and Indic Apple mappings
+    if os.path.exists(os.path.join(ASSETS_DIR, "system", "etc", "fonts.xml")):
+        shutil.copy2(
+            os.path.join(ASSETS_DIR, "system", "etc", "fonts.xml"),
+            os.path.join(sysetc, "fonts.xml"),
+        )
+
+    # 2. iOS 26.4 Apple Color Emoji
     shutil.copy2(
         os.path.join(ASSETS_DIR, "system", "fonts", "NotoColorEmoji.ttf"),
         os.path.join(sysfonts, "NotoColorEmoji.ttf"),
     )
 
-    # 2. Apple SF Pro Text Heavy (Exact 800 Bold dev font with 1950/-494 matched metrics)
+    # 3. Apple SF Pro Text Heavy (Exact 800 Bold dev font with 1950/-494 matched metrics)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro-Bold.ttf"),
         os.path.join(sysfonts, "SF-Pro-Bold.ttf"),
@@ -53,31 +62,31 @@ def copy_assets():
     shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Variable.ttf"))
     shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Bold.otf"))
 
-    # 3. Apple New York Serif Bold
+    # 4. Apple New York Serif Bold
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "NewYork-Bold.ttf"),
         os.path.join(sysfonts, "NewYork-Bold.ttf"),
     )
 
-    # 4. SF Pro Rounded Bold
+    # 5. SF Pro Rounded Bold
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro-Rounded-Bold.otf"),
         os.path.join(sysfonts, "SF-Pro-Rounded.otf"),
     )
 
-    # 5. Normalized Noto Nastaliq Urdu Bold (Proportional 952/-241 on 1000 UPM / 1950/-494 on 2048 UPM)
+    # 6. Normalized Noto Nastaliq Urdu Bold (Proportional 952/-241 on 1000 UPM / 1950/-494 on 2048 UPM)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "NotoNastaliqUrdu-Bold.ttf"),
         os.path.join(sysfonts, "NotoNastaliqUrdu-Bold.ttf"),
     )
 
-    # 6. Apple SF Multilingual Fonts (SF Arabic, SF Hebrew, SF Armenian, SF Georgian)
+    # 7. Apple SF Multilingual Fonts (SF Arabic, SF Hebrew, SF Armenian, SF Georgian)
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Arabic-Bold.ttf"), os.path.join(sysfonts, "SF-Arabic.ttf"))
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Hebrew-Bold.ttf"), os.path.join(sysfonts, "SF-Hebrew.ttf"))
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Armenian-Bold.ttf"), os.path.join(sysfonts, "SF-Armenian.ttf"))
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Georgian-Bold.ttf"), os.path.join(sysfonts, "SF-Georgian.ttf"))
 
-    # 7. Normalized World Language Fonts (Devanagari, Bengali, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Tamil, Telugu, Ethiopic, Khmer, Tibetan)
+    # 8. Normalized World Language Fonts (Devanagari, Bengali, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Tamil, Telugu, Ethiopic, Khmer, Tibetan)
     if os.path.exists(PATCHED_VF_DIR):
         for fn in os.listdir(PATCHED_VF_DIR):
             if fn.endswith(".ttf") or fn.endswith(".otf"):
@@ -89,7 +98,7 @@ id=ios_bold_font_emoji
 name= iOS Bold Font & iOS 26.4 Emoji (All Languages Edition)
 version=v2.0 • Ultra
 versionCode=200
-author=sheikhmehraan
+author=sheikhmehraann
 description= Complete Multilingual Apple Typography (SF Pro Heavy + New York + SF Arabic/Hebrew/Armenian/Georgian + Urdu Nastaliq Bold + Indic Bold + iOS 26.4 Emoji). 100% Boldness and Zero-Padding-Distortion across all languages.
 """)
 
@@ -144,6 +153,7 @@ mkdir -p "$MODPATH/system/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/vendor/fonts" 2>/dev/null
+mkdir -p "$MODPATH/system/etc" 2>/dev/null
 
 place() {
     local src="$1" name="$2"
@@ -154,7 +164,6 @@ place() {
 }
 
 ui_print "  [+] Step 1/5: Deploying Apple SF Pro Heavy over System UI Fonts..."
-# Replace ONLY standard Latin/UI system fonts with SF Pro Heavy (NEVER touch multilingual fonts in this step!)
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     [ -d "$pdir" ] || continue
     for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
@@ -217,7 +226,7 @@ for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf \
     place "$GF" "$f"
 done
 
-# 6. Indic & World Script Fonts (Devanagari, Bengali, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Tamil, Telugu, Ethiopic, Khmer, Tibetan)
+# 6. Indic & World Script Fonts
 for vf in "$FD"/*-VF.ttf; do
     [ -f "$vf" ] || continue
     vname=$(basename "$vf")

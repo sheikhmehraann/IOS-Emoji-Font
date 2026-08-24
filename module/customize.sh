@@ -49,6 +49,7 @@ mkdir -p "$MODPATH/system/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/vendor/fonts" 2>/dev/null
+mkdir -p "$MODPATH/system/etc" 2>/dev/null
 
 place() {
     local src="$1" name="$2"
@@ -59,7 +60,6 @@ place() {
 }
 
 ui_print "  [+] Step 1/5: Deploying Apple SF Pro Heavy over System UI Fonts..."
-# Replace ONLY standard Latin/UI system fonts with SF Pro Heavy (NEVER touch multilingual fonts in this step!)
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     [ -d "$pdir" ] || continue
     for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
@@ -122,7 +122,7 @@ for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf \
     place "$GF" "$f"
 done
 
-# 6. Indic & World Script Fonts (Devanagari, Bengali, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Tamil, Telugu, Ethiopic, Khmer, Tibetan)
+# 6. Indic & World Script Fonts
 for vf in "$FD"/*-VF.ttf; do
     [ -f "$vf" ] || continue
     vname=$(basename "$vf")
