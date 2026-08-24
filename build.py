@@ -23,7 +23,6 @@ def ensure_dirs():
         os.path.join("system", "product", "fonts"),
         os.path.join("system", "system_ext", "fonts"),
         os.path.join("system", "vendor", "fonts"),
-        os.path.join("system", "etc"),
     ]:
         os.makedirs(os.path.join(MODULE_DIR, sub), exist_ok=True)
     os.makedirs(DIST_DIR, exist_ok=True)
@@ -39,22 +38,14 @@ def copy_assets():
     shutil.copy2(os.path.join(src, "updater-script"), os.path.join(dst, "updater-script"))
 
     sysfonts = os.path.join(MODULE_DIR, "system", "fonts")
-    sysetc = os.path.join(MODULE_DIR, "system", "etc")
 
-    # 1. Custom fonts.xml with explicit Urdu, Arabic, and Indic Apple mappings
-    if os.path.exists(os.path.join(ASSETS_DIR, "system", "etc", "fonts.xml")):
-        shutil.copy2(
-            os.path.join(ASSETS_DIR, "system", "etc", "fonts.xml"),
-            os.path.join(sysetc, "fonts.xml"),
-        )
-
-    # 2. iOS 26.4 Apple Color Emoji
+    # 1. iOS 26.4 Apple Color Emoji
     shutil.copy2(
         os.path.join(ASSETS_DIR, "system", "fonts", "NotoColorEmoji.ttf"),
         os.path.join(sysfonts, "NotoColorEmoji.ttf"),
     )
 
-    # 3. Apple SF Pro Text Heavy (Exact 800 Bold dev font with 1950/-494 matched metrics)
+    # 2. Apple SF Pro Text Heavy (Exact 800 Bold dev font with 1950/-494 matched metrics)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro-Bold.ttf"),
         os.path.join(sysfonts, "SF-Pro-Bold.ttf"),
@@ -62,31 +53,31 @@ def copy_assets():
     shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Variable.ttf"))
     shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Bold.otf"))
 
-    # 4. Apple New York Serif Bold
+    # 3. Apple New York Serif Bold
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "NewYork-Bold.ttf"),
         os.path.join(sysfonts, "NewYork-Bold.ttf"),
     )
 
-    # 5. SF Pro Rounded Bold
+    # 4. SF Pro Rounded Bold
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro-Rounded-Bold.otf"),
         os.path.join(sysfonts, "SF-Pro-Rounded.otf"),
     )
 
-    # 6. Normalized Noto Nastaliq Urdu Bold (Proportional 952/-241 on 1000 UPM / 1950/-494 on 2048 UPM)
+    # 5. Normalized Authentic Cascading Noto Nastaliq Urdu Bold (Proportional 952/-241 on 1000 UPM / 1950/-494 on 2048 UPM)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "NotoNastaliqUrdu-Bold.ttf"),
         os.path.join(sysfonts, "NotoNastaliqUrdu-Bold.ttf"),
     )
 
-    # 7. Apple SF Multilingual Fonts (SF Arabic, SF Hebrew, SF Armenian, SF Georgian)
+    # 6. Apple SF Multilingual Fonts (SF Hebrew, SF Armenian, SF Georgian, SF Arabic)
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Arabic-Bold.ttf"), os.path.join(sysfonts, "SF-Arabic.ttf"))
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Hebrew-Bold.ttf"), os.path.join(sysfonts, "SF-Hebrew.ttf"))
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Armenian-Bold.ttf"), os.path.join(sysfonts, "SF-Armenian.ttf"))
     shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Georgian-Bold.ttf"), os.path.join(sysfonts, "SF-Georgian.ttf"))
 
-    # 8. Normalized World Language Fonts (Devanagari, Bengali, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Tamil, Telugu, Ethiopic, Khmer, Tibetan)
+    # 7. Normalized World Language Fonts (Devanagari, Bengali, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Tamil, Telugu, Ethiopic, Khmer, Tibetan)
     if os.path.exists(PATCHED_VF_DIR):
         for fn in os.listdir(PATCHED_VF_DIR):
             if fn.endswith(".ttf") or fn.endswith(".otf"):
@@ -99,7 +90,7 @@ name= iOS Bold Font & iOS 26.4 Emoji (All Languages Edition)
 version=v2.0 • Ultra
 versionCode=200
 author=sheikhmehraann
-description= Complete Multilingual Apple Typography (SF Pro Heavy + New York + SF Arabic/Hebrew/Armenian/Georgian + Urdu Nastaliq Bold + Indic Bold + iOS 26.4 Emoji). 100% Boldness and Zero-Padding-Distortion across all languages.
+description= Complete Multilingual Apple Typography (SF Pro Heavy + New York + Authentic Cascading Nastaliq Urdu Bold + SF Hebrew/Armenian/Georgian + Indic Heavy Bold + iOS 26.4 Emoji). 100% Boldness and Zero-Padding-Distortion across all languages.
 """)
 
     write_lf(os.path.join(MODULE_DIR, "customize.sh"), r"""#!/system/bin/sh
@@ -143,7 +134,6 @@ BTF="$FD/SF-Pro-Bold.ttf"
 NYF="$FD/NewYork-Bold.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
-AF="$FD/SF-Arabic.ttf"
 HF="$FD/SF-Hebrew.ttf"
 AMF="$FD/SF-Armenian.ttf"
 GF="$FD/SF-Georgian.ttf"
@@ -153,7 +143,6 @@ mkdir -p "$MODPATH/system/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/vendor/fonts" 2>/dev/null
-mkdir -p "$MODPATH/system/etc" 2>/dev/null
 
 place() {
     local src="$1" name="$2"
@@ -192,41 +181,37 @@ done
 ui_print "      ✔ Apple New York Serif deployed"
 ui_print " "
 
-ui_print "  [+] Step 3/5: Deploying Urdu, Arabic, Hebrew, Armenian, Georgian & Indic Scripts..."
-# 1. Urdu Nastaliq
+ui_print "  [+] Step 3/5: Deploying Authentic Cascading Nastaliq Urdu & Multilingual Scripts..."
+# 1. Authentic Cascading Nastaliq Urdu mapped to ALL Arabic/Urdu fallback targets
 for f in NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
-         NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf; do
-    place "$UF" "$f"
-done
-
-# 2. Arabic
-for f in NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
+         NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf \
+         NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
          NotoNaskhArabicUI-Regular.ttf NotoNaskhArabicUI-Bold.ttf \
          NotoSansArabic-Regular.ttf NotoSansArabic-Bold.ttf \
          NotoSansArabicUI-Regular.ttf NotoSansArabicUI-Bold.ttf \
          NotoKufiArabic-Regular.ttf NotoKufiArabic-Bold.ttf; do
-    place "$AF" "$f"
+    place "$UF" "$f"
 done
 
-# 3. Hebrew
+# 2. Hebrew
 for f in NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf \
          NotoSansHebrew-VF.ttf NotoSerifHebrew-Regular.ttf NotoSerifHebrew-Bold.ttf; do
     place "$HF" "$f"
 done
 
-# 4. Armenian
+# 3. Armenian
 for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf \
          NotoSansArmenian-VF.ttf NotoSerifArmenian-Regular.ttf NotoSerifArmenian-Bold.ttf; do
     place "$AMF" "$f"
 done
 
-# 5. Georgian
+# 4. Georgian
 for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf \
          NotoSansGeorgian-VF.ttf NotoSerifGeorgian-Regular.ttf NotoSerifGeorgian-Bold.ttf; do
     place "$GF" "$f"
 done
 
-# 6. Indic & World Script Fonts
+# 5. Indic & World Script Fonts (Devanagari/Hindi, Bengali, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Tamil, Telugu, Ethiopic, Khmer, Tibetan)
 for vf in "$FD"/*-VF.ttf; do
     [ -f "$vf" ] || continue
     vname=$(basename "$vf")

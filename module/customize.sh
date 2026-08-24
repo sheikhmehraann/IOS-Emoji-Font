@@ -39,7 +39,6 @@ BTF="$FD/SF-Pro-Bold.ttf"
 NYF="$FD/NewYork-Bold.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
-AF="$FD/SF-Arabic.ttf"
 HF="$FD/SF-Hebrew.ttf"
 AMF="$FD/SF-Armenian.ttf"
 GF="$FD/SF-Georgian.ttf"
@@ -49,7 +48,6 @@ mkdir -p "$MODPATH/system/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/product/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/system_ext/fonts" 2>/dev/null
 mkdir -p "$MODPATH/system/vendor/fonts" 2>/dev/null
-mkdir -p "$MODPATH/system/etc" 2>/dev/null
 
 place() {
     local src="$1" name="$2"
@@ -88,41 +86,37 @@ done
 ui_print "      ✔ Apple New York Serif deployed"
 ui_print " "
 
-ui_print "  [+] Step 3/5: Deploying Urdu, Arabic, Hebrew, Armenian, Georgian & Indic Scripts..."
-# 1. Urdu Nastaliq
+ui_print "  [+] Step 3/5: Deploying Authentic Cascading Nastaliq Urdu & Multilingual Scripts..."
+# 1. Authentic Cascading Nastaliq Urdu mapped to ALL Arabic/Urdu fallback targets
 for f in NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
-         NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf; do
-    place "$UF" "$f"
-done
-
-# 2. Arabic
-for f in NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
+         NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf \
+         NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
          NotoNaskhArabicUI-Regular.ttf NotoNaskhArabicUI-Bold.ttf \
          NotoSansArabic-Regular.ttf NotoSansArabic-Bold.ttf \
          NotoSansArabicUI-Regular.ttf NotoSansArabicUI-Bold.ttf \
          NotoKufiArabic-Regular.ttf NotoKufiArabic-Bold.ttf; do
-    place "$AF" "$f"
+    place "$UF" "$f"
 done
 
-# 3. Hebrew
+# 2. Hebrew
 for f in NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf \
          NotoSansHebrew-VF.ttf NotoSerifHebrew-Regular.ttf NotoSerifHebrew-Bold.ttf; do
     place "$HF" "$f"
 done
 
-# 4. Armenian
+# 3. Armenian
 for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf \
          NotoSansArmenian-VF.ttf NotoSerifArmenian-Regular.ttf NotoSerifArmenian-Bold.ttf; do
     place "$AMF" "$f"
 done
 
-# 5. Georgian
+# 4. Georgian
 for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf \
          NotoSansGeorgian-VF.ttf NotoSerifGeorgian-Regular.ttf NotoSerifGeorgian-Bold.ttf; do
     place "$GF" "$f"
 done
 
-# 6. Indic & World Script Fonts
+# 5. Indic & World Script Fonts (Devanagari/Hindi, Bengali, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Tamil, Telugu, Ethiopic, Khmer, Tibetan)
 for vf in "$FD"/*-VF.ttf; do
     [ -f "$vf" ] || continue
     vname=$(basename "$vf")
