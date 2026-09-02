@@ -1,7 +1,9 @@
 import os
 import shutil
 import zipfile
+import subprocess
 import hashlib
+from fontTools.ttLib import TTFont
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 MODULE_DIR = os.path.join(BASE_DIR, "module")
@@ -20,9 +22,6 @@ def ensure_dirs():
     for sub in [
         os.path.join("META-INF", "com", "google", "android"),
         os.path.join("system", "fonts"),
-        os.path.join("system", "product", "fonts"),
-        os.path.join("system", "system_ext", "fonts"),
-        os.path.join("system", "vendor", "fonts"),
     ]:
         os.makedirs(os.path.join(MODULE_DIR, sub), exist_ok=True)
     os.makedirs(DIST_DIR, exist_ok=True)
@@ -45,15 +44,13 @@ def copy_assets():
         os.path.join(sysfonts, "NotoColorEmoji.ttf"),
     )
 
-    # 2. Apple SF Pro Text Heavy (Exact 800 Bold dev font with 1950/-494 matched metrics)
+    # 2. Apple SF Pro Text Heavy (Single master copy)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "SF-Pro-Bold.ttf"),
         os.path.join(sysfonts, "SF-Pro-Bold.ttf"),
     )
-    shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Variable.ttf"))
-    shutil.copy2(os.path.join(sysfonts, "SF-Pro-Bold.ttf"), os.path.join(sysfonts, "SF-Pro-Bold.otf"))
 
-    # 3. Apple New York Serif Bold
+    # 3. Apple New York Serif Bold (Single master copy)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "NewYork-Bold.ttf"),
         os.path.join(sysfonts, "NewYork-Bold.ttf"),
@@ -65,38 +62,55 @@ def copy_assets():
         os.path.join(sysfonts, "SF-Pro-Rounded.otf"),
     )
 
-    # 5. Normalized Authentic Cascading Noto Nastaliq Urdu Bold (Proportional 952/-241 on 1000 UPM / 1950/-494 on 2048 UPM)
+    # 5. Tuned Authentic Cascading Noto Nastaliq Urdu Bold (Single master copy)
     shutil.copy2(
         os.path.join(APPLE_FONTS_DIR, "NotoNastaliqUrdu-Bold.ttf"),
         os.path.join(sysfonts, "NotoNastaliqUrdu-Bold.ttf"),
     )
 
-    # 6. Apple SF Multilingual Fonts (SF Hebrew, SF Armenian, SF Georgian, SF Arabic)
-    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Arabic-Bold.ttf"), os.path.join(sysfonts, "SF-Arabic.ttf"))
-    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Hebrew-Bold.ttf"), os.path.join(sysfonts, "SF-Hebrew.ttf"))
-    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Armenian-Bold.ttf"), os.path.join(sysfonts, "SF-Armenian.ttf"))
-    shutil.copy2(os.path.join(APPLE_FONTS_DIR, "SF-Georgian-Bold.ttf"), os.path.join(sysfonts, "SF-Georgian.ttf"))
-
-    # 7. Normalized World Language Fonts (Devanagari, Bengali, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Tamil, Telugu, Ethiopic, Khmer, Tibetan)
-    if os.path.exists(PATCHED_VF_DIR):
-        for fn in os.listdir(PATCHED_VF_DIR):
-            if fn.endswith(".ttf") or fn.endswith(".otf"):
-                shutil.copy2(os.path.join(PATCHED_VF_DIR, fn), os.path.join(sysfonts, fn))
+    # 6. Complete list of authentic, normalized world language fonts
+    unique_scripts = [
+        "NotoSansDevanagari-VF.ttf",
+        "NotoSansGurmukhi-VF.ttf",
+        "NotoSansBengali-VF.ttf",
+        "NotoSansGujarati-VF.ttf",
+        "NotoSansTamil-VF.ttf",
+        "NotoSansTelugu-VF.ttf",
+        "NotoSansKannada-VF.ttf",
+        "NotoSansMalayalam-VF.ttf",
+        "NotoSansSinhala-VF.ttf",
+        "NotoSansThai-VF.ttf",
+        "NotoSansKhmer-VF.ttf",
+        "NotoSansLao-VF.ttf",
+        "NotoSansMyanmar-VF.ttf",
+        "NotoSansEthiopic-VF.ttf",
+        "NotoSansHebrew-VF.ttf",
+        "NotoSansArmenian-VF.ttf",
+        "NotoSansGeorgian-VF.ttf",
+        "NotoSerifTibetan-VF.ttf",
+    ]
+    for fn in unique_scripts:
+        src_path = os.path.join(PATCHED_VF_DIR, fn)
+        if os.path.exists(src_path):
+            shutil.copy2(src_path, os.path.join(sysfonts, fn))
+            print(f"Included in module: {fn} ({os.path.getsize(src_path)} bytes)")
+        else:
+            print(f"[WARNING] Missing font: {fn}")
 
 def write_module_scripts():
     write_lf(os.path.join(MODULE_DIR, "module.prop"), """\
-id=ios_bold_font_emoji
-name= iOS Bold Font & iOS 26.4 Emoji (All Languages Edition)
-version=v2.0 • Ultra
+id=IOS-bold-Font-Emoji
+name=iOS Bold Font & iOS Emoji
+version=v2.0
 versionCode=200
 author=sheikhmehraann
-description= Complete Multilingual Apple Typography (SF Pro Heavy + New York + Authentic Cascading Nastaliq Urdu Bold + SF Hebrew/Armenian/Georgian + Indic Heavy Bold + iOS 26.4 Emoji). 100% Boldness and Zero-Padding-Distortion across all languages.
+description=System-wide iOS bold fonts and iOS emoji.
 """)
 
     write_lf(os.path.join(MODULE_DIR, "customize.sh"), r"""#!/system/bin/sh
 ##########################################################################################
-#  iOS Bold Font & iOS 26.4 Emoji - Multilingual Universal Installer
-# Author: sheikhmehraan
+# iOS Bold Font & iOS Emoji
+# Author: sheikhmehraann
 ##########################################################################################
 
 AUTOMOUNT=true
@@ -106,23 +120,15 @@ POSTFSDATA=true
 LATESTARTSERVICE=true
 
 ui_print " "
-ui_print "  ███████╗███████╗    ██╗ ██████╗ ███████╗"
-ui_print "  ██╔════╝██╔════╝    ██║██╔═══██╗██╔════╝"
-ui_print "  ███████╗█████╗      ██║██║   ██║███████╗"
-ui_print "  ╚════██║██╔══╝      ██║██║   ██║╚════██║"
-ui_print "  ███████║██║         ██║╚██████╔╝███████║"
-ui_print "  ╚══════╝╚═╝         ╚═╝ ╚═════╝ ╚══════╝"
-ui_print "  ─────────────────────────────────────────"
-ui_print "   iOS Bold Font & iOS 26.4 Emoji Ultra   "
-ui_print "  Multilingual Universal Edition           "
-ui_print "  Developer : sheikhmehraan                "
-ui_print "  ─────────────────────────────────────────"
+ui_print "  ██╗ ██████╗ ███████╗"
+ui_print "  ██║██╔═══██╗██╔════╝"
+ui_print "  ██║██║   ██║███████╗"
+ui_print "  ██║██║   ██║╚════██║"
+ui_print "  ██║╚██████╔╝███████║"
+ui_print "  ╚═╝ ╚═════╝ ╚══════╝"
 ui_print " "
-
-ui_print "  [i] Device Information:"
-ui_print "      • Model   : $(getprop ro.product.model)"
-ui_print "      • Brand   : $(getprop ro.product.brand)"
-ui_print "      • Android : $(getprop ro.build.version.release) (SDK $(getprop ro.build.version.sdk))"
+ui_print "  Device: $(getprop ro.product.model)"
+ui_print "  Flashing..."
 ui_print " "
 
 if [ -n "$ZIPFILE" ] && [ -f "$ZIPFILE" ]; then
@@ -134,9 +140,6 @@ BTF="$FD/SF-Pro-Bold.ttf"
 NYF="$FD/NewYork-Bold.ttf"
 RF="$FD/SF-Pro-Rounded.otf"
 UF="$FD/NotoNastaliqUrdu-Bold.ttf"
-HF="$FD/SF-Hebrew.ttf"
-AMF="$FD/SF-Armenian.ttf"
-GF="$FD/SF-Georgian.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
 mkdir -p "$MODPATH/system/fonts" 2>/dev/null
@@ -152,13 +155,16 @@ place() {
     cp -f "$src" "$MODPATH/system/vendor/fonts/$name" 2>/dev/null
 }
 
-ui_print "  [+] Step 1/5: Deploying Apple SF Pro Heavy over System UI Fonts..."
+# 1. Deploy Apple SF Pro Heavy over System UI & Latin Fonts
 for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
     [ -d "$pdir" ] || continue
     for fpath in "$pdir"/*.ttf "$pdir"/*.otf; do
         [ -f "$fpath" ] || continue
         fname=$(basename "$fpath")
         case "$fname" in
+            *Thai*|*thai*|*SC*|*sc*|*TC*|*tc*|*CJK*|*cjk*|*JP*|*jp*|*KR*|*kr*|*Gurmukhi*|*Devanagari*|*Bengali*|*Gujarati*|*Tamil*|*Telugu*|*Kannada*|*Malayalam*|*Sinhala*|*Khmer*|*Lao*|*Myanmar*|*Ethiopic*|*Hebrew*|*Armenian*|*Georgian*|*Tibetan*|*Arabic*|*Urdu*)
+                continue
+                ;;
             Roboto*|GoogleSans*|SourceSans*|DroidSans*|SECRoboto*|\
             TranSans*|TOS*|TransSans*|InfinixSans*|TecnoSans*|ItelSans*|\
             MiSans*|Miui*|OPlusSans*|OnePlusSans*|Samsung*|\
@@ -171,18 +177,13 @@ for pdir in /system/fonts /product/fonts /system_ext/fonts /vendor/fonts; do
         esac
     done
 done
-ui_print "      ✔ System UI and English fonts mapped to SF Pro Heavy"
-ui_print " "
 
-ui_print "  [+] Step 2/5: Deploying Apple New York Serif..."
+# 2. Deploy Apple New York Serif
 for f in NotoSerif-Regular.ttf NotoSerif-Bold.ttf NotoSerif-Italic.ttf NotoSerif-BoldItalic.ttf; do
     place "$NYF" "$f"
 done
-ui_print "      ✔ Apple New York Serif deployed"
-ui_print " "
 
-ui_print "  [+] Step 3/5: Deploying Authentic Cascading Nastaliq Urdu & Multilingual Scripts..."
-# 1. Authentic Cascading Nastaliq Urdu mapped to ALL Arabic/Urdu fallback targets
+# 3. Deploy Authentic Nastaliq Urdu over Arabic & Urdu Fallbacks
 for f in NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu.ttf \
          NotoNastaliqUrdu-VF.ttf NotoNastaliqUrdu[wght].ttf \
          NotoNaskhArabic-Regular.ttf NotoNaskhArabic-Bold.ttf \
@@ -193,34 +194,24 @@ for f in NotoNastaliqUrdu-Regular.ttf NotoNastaliqUrdu-Bold.ttf NotoNastaliqUrdu
     place "$UF" "$f"
 done
 
-# 2. Hebrew
-for f in NotoSansHebrew-Regular.ttf NotoSansHebrew-Bold.ttf \
-         NotoSansHebrew-VF.ttf NotoSerifHebrew-Regular.ttf NotoSerifHebrew-Bold.ttf; do
-    place "$HF" "$f"
+# 4. Deploy All World Scripts & Auto-generate UI / Serif Fallbacks
+for script in Devanagari Gurmukhi Bengali Gujarati Tamil Telugu Kannada Malayalam Sinhala Thai Khmer Lao Myanmar Ethiopic Hebrew Armenian Georgian; do
+    src="$FD/NotoSans${script}-VF.ttf"
+    [ -f "$src" ] || continue
+    place "$src" "NotoSans${script}-VF.ttf"
+    place "$src" "NotoSans${script}UI-VF.ttf"
+    place "$src" "NotoSans${script}-Bold.ttf"
+    place "$src" "NotoSans${script}-Regular.ttf"
+    place "$src" "NotoSans${script}UI-Bold.ttf"
+    place "$src" "NotoSans${script}UI-Regular.ttf"
+    place "$src" "NotoSerif${script}-VF.ttf"
+    place "$src" "NotoSerif${script}-Bold.ttf"
+    place "$src" "NotoSerif${script}-Regular.ttf"
 done
 
-# 3. Armenian
-for f in NotoSansArmenian-Regular.ttf NotoSansArmenian-Bold.ttf \
-         NotoSansArmenian-VF.ttf NotoSerifArmenian-Regular.ttf NotoSerifArmenian-Bold.ttf; do
-    place "$AMF" "$f"
-done
+[ -f "$FD/NotoSerifTibetan-VF.ttf" ] && place "$FD/NotoSerifTibetan-VF.ttf" "NotoSerifTibetan-VF.ttf"
 
-# 4. Georgian
-for f in NotoSansGeorgian-Regular.ttf NotoSansGeorgian-Bold.ttf \
-         NotoSansGeorgian-VF.ttf NotoSerifGeorgian-Regular.ttf NotoSerifGeorgian-Bold.ttf; do
-    place "$GF" "$f"
-done
-
-# 5. Indic & World Script Fonts (Devanagari/Hindi, Bengali, Gujarati, Gurmukhi, Kannada, Malayalam, Sinhala, Tamil, Telugu, Ethiopic, Khmer, Tibetan)
-for vf in "$FD"/*-VF.ttf; do
-    [ -f "$vf" ] || continue
-    vname=$(basename "$vf")
-    place "$vf" "$vname"
-done
-ui_print "      ✔ All world languages deployed with 100% metric and boldness parity"
-ui_print " "
-
-ui_print "  [+] Step 4/5: Deploying iOS 26.4 Emoji & Purging System Caches..."
+# 5. Deploy Apple Color Emoji
 for f in SamsungColorEmoji.ttf LGNotoColorEmoji.ttf HTC_ColorEmoji.ttf \
          AndroidEmoji-htc.ttf ColorUniEmoji.ttf DcmColorEmoji.ttf \
          CombinedColorEmoji.ttf NotoColorEmojiLegacy.ttf NotoColorEmoji-Flags.ttf NotoColorEmojiFlags.ttf; do
@@ -229,12 +220,12 @@ for f in SamsungColorEmoji.ttf LGNotoColorEmoji.ttf HTC_ColorEmoji.ttf \
     fi
 done
 
+# 6. Purge Caches & Font Locks
 rm -rf /data/fonts/* 2>/dev/null
 rm -f  /data/system/font_fallback.xml 2>/dev/null
 rm -rf /data/data/com.google.android.gms/files/fonts/* 2>/dev/null
 rm -rf /data/user_de/*/com.google.android.gms/files/fonts/* 2>/dev/null
 
-# Lock WhatsApp in-app downloaded font
 if [ -d "/data/data/com.whatsapp" ]; then
     mkdir -p "/data/data/com.whatsapp/files/NetworkResource" 2>/dev/null
     chattr -i "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
@@ -259,12 +250,8 @@ for s in post-fs-data.sh service.sh action.sh; do
     [ -f "$MODPATH/$s" ] && set_perm "$MODPATH/$s" 0 0 0755
 done
 chcon -R u:object_r:system_file:s0 "$MODPATH/system" 2>/dev/null
-ui_print "      ✔ Permissions & SELinux contexts applied"
-ui_print " "
-ui_print "  ─────────────────────────────────────────"
-ui_print "  ✔ Installation Complete!                 "
-ui_print "  ✔ Reboot to apply changes.               "
-ui_print "  ─────────────────────────────────────────"
+
+ui_print "  Done. Reboot device."
 ui_print " "
 """)
 
@@ -280,27 +267,19 @@ done
 """)
 
     write_lf(os.path.join(MODULE_DIR, "service.sh"), r"""#!/system/bin/sh
-##########################################################################################
-#  iOS Bold Font & iOS 26.4 Emoji - Safe Post-Boot Daemon
-# Author: sheikhmehraan
-##########################################################################################
-
 MODPATH=${0%/*}
 FD="$MODPATH/system/fonts"
 BTF="$FD/SF-Pro-Bold.ttf"
 EF="$FD/NotoColorEmoji.ttf"
 
-# Wait until Android fully completes boot to avoid any system_server startup race
 while [ "$(getprop sys.boot_completed)" != "1" ]; do sleep 2; done
 
-# Replace in-app emoji fonts in WhatsApp / Facebook / Instagram / Gboard
 if [ -f "$EF" ]; then
     for font in $(find /data/data /data/user/0 -iname "*emoji*.ttf" 2>/dev/null); do
         [ -w "$font" ] && cp -f "$EF" "$font" && chmod 644 "$font" 2>/dev/null
     done
 fi
 
-# WhatsApp in-app font lock
 if [ -d "/data/data/com.whatsapp" ]; then
     mkdir -p "/data/data/com.whatsapp/files/NetworkResource" 2>/dev/null
     chattr -i "/data/data/com.whatsapp/files/NetworkResource/roboto_flex_font.ttf" 2>/dev/null
@@ -327,22 +306,24 @@ sh "$MODPATH/service.sh" && echo " Done." || echo " Failed." >&2
 """)
 
 def package_zip():
-    with zipfile.ZipFile(OUTPUT_ZIP, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-        for root, _, files in os.walk(MODULE_DIR):
-            for fn in sorted(files):
-                full = os.path.join(root, fn)
-                rel = os.path.relpath(full, MODULE_DIR).replace("\\", "/")
-                zi = zipfile.ZipInfo(rel)
-                zi.external_attr = (0o755 if rel.endswith(".sh") or "update-binary" in rel else 0o644) << 16
-                with open(full, "rb") as f:
-                    zf.writestr(zi, f.read())
+    if os.path.exists(OUTPUT_ZIP):
+        os.remove(OUTPUT_ZIP)
+
+    seven_zip = r"C:\Program Files\7-Zip\7z.exe"
+    cmd = [
+        seven_zip, "a", "-tzip",
+        "-mx=9", "-mfb=258", "-mpass=15",
+        OUTPUT_ZIP,
+        os.path.join(MODULE_DIR, "*")
+    ]
+    subprocess.run(cmd, check=True)
 
     h = hashlib.sha256()
     with open(OUTPUT_ZIP, "rb") as f:
         while c := f.read(65536):
             h.update(c)
     sz = os.path.getsize(OUTPUT_ZIP) / (1024 * 1024)
-    print(f"[SUCCESS] {os.path.basename(OUTPUT_ZIP)} {sz:.2f} MB sha256:{h.hexdigest()}")
+    print(f"[SUCCESS] Ultra Compressed ZIP: {os.path.basename(OUTPUT_ZIP)} {sz:.2f} MB sha256:{h.hexdigest()}")
 
 if __name__ == "__main__":
     clean_module_dir()
